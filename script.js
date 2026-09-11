@@ -1,674 +1,659 @@
-// Get the button:
-let mybutton = document.getElementById("myBtn");
+/* =========================================================================
+   WORKSHOP2U — FRONT-END LOGIC (full feature set)
+   Talks to a Google Apps Script Web App (Code.gs). Set CONFIG.API_URL below.
+   ========================================================================= */
 
-// When the user scrolls down 20px from the top of the document, show the button
-window.onscroll = function() {scrollFunction()};
+const CONFIG = {
+  API_URL: "https://script.google.com/macros/s/REPLACE_WITH_YOUR_DEPLOYMENT_ID/exec",
+  WHATSAPP_NUMBER: "60137137100" // digits only, country code first — used by the WhatsApp button
+};
 
-function scrollFunction() {
-  if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-    mybutton.style.display = "block";
-  } else {
-    mybutton.style.display = "none";
+const SESSION_KEY = "w2u_session";
+let pendingOtpUsername = null;
+let currentAnalyticsChart = null;
+
+/* -------------------------------------------------------------------------
+   Low-level API helper. POSTs as text/plain to avoid a CORS preflight,
+   which is the standard workaround for calling Apps Script cross-origin.
+------------------------------------------------------------------------- */
+async function apiCall(action, payload = {}) {
+  if (CONFIG.API_URL.includes("REPLACE_WITH_YOUR_DEPLOYMENT_ID")) {
+    return { success: false, message: "Backend not configured yet. Set CONFIG.API_URL in script.js." };
+  }
+  try {
+    const res = await fetch(CONFIG.API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, ...payload })
+    });
+    return await res.json();
+  } catch (err) {
+    console.error("API error:", err);
+    return { success: false, message: "Network error contacting server. Please try again." };
   }
 }
 
-// When the user clicks on the button, scroll to the top of the document
-function topFunction() {
-  document.body.scrollTop = 0; // For Safari
-  document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+function getSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { return null; } }
+function setSession(data) { localStorage.setItem(SESSION_KEY, JSON.stringify(data)); }
+function clearSession() { localStorage.removeItem(SESSION_KEY); }
+function showMsg(el, text, ok) { el.textContent = text; el.className = "form-msg show " + (ok ? "ok" : "err"); }
+function money(n) { return "RM " + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function siteUrl() { return window.location.origin + window.location.pathname; }
+
+/* -------------------------------------------------------------------------
+   Nav (mobile toggle)
+------------------------------------------------------------------------- */
+document.getElementById("navToggle").addEventListener("click", () => document.getElementById("navLinks").classList.toggle("open"));
+document.querySelectorAll(".nav-links a").forEach(a => a.addEventListener("click", () => document.getElementById("navLinks").classList.remove("open")));
+
+/* -------------------------------------------------------------------------
+   FEATURE 13 — booking form CAPTCHA (math challenge) + honeypot
+------------------------------------------------------------------------- */
+let captchaAnswer = 0;
+function newCaptcha() {
+  const a = Math.floor(Math.random() * 9) + 1;
+  const b = Math.floor(Math.random() * 9) + 1;
+  captchaAnswer = a + b;
+  document.getElementById("captchaQuestion").textContent = `What is ${a} + ${b}?`;
+  document.getElementById("captchaInput").value = "";
 }
+newCaptcha();
 
-/* === FUNGSI DROPDOWN ABOUT US === */
-document.addEventListener('DOMContentLoaded', function() {
-    // Pastikan kita merujuk butang dropdown yang betul
-    const dropbtn = document.querySelector('.about-dropbtn'); 
-    const dropdownContent = document.getElementById("aboutDropdown");
+/* -------------------------------------------------------------------------
+   FEATURE 10 — WhatsApp float button
+------------------------------------------------------------------------- */
+document.getElementById("whatsappFloat").href =
+  `https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${encodeURIComponent("Hi Workshop2U, I'd like to ask about your services.")}`;
 
-    if (dropbtn && dropdownContent) {
-        // ... (Kekalkan kod fungsi toggle dan window.onclick sedia ada)
-        dropbtn.addEventListener('click', function(event) {
-            event.stopPropagation(); 
-            dropdownContent.classList.toggle("show");
-        });
+/* -------------------------------------------------------------------------
+   Public booking form
+------------------------------------------------------------------------- */
+const bookingForm = document.getElementById("bookingForm");
+bookingForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("bkSubmit");
+  const msg = document.getElementById("bkMsg");
 
-        // Logik untuk menutup dropdown bila klik di luar
-        window.onclick = function(event) {
-            if (!event.target.matches('.about-dropbtn')) {
-                const openDropdowns = document.getElementsByClassName("dropdown-content");
-                let i;
-                for (i = 0; i < openDropdowns.length; i++) {
-                    const openDropdown = openDropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
-                    }
-                }
-            }
-        }
-    }
+  if (Number(document.getElementById("captchaInput").value) !== captchaAnswer) {
+    showMsg(msg, "That answer doesn't look right — please try the sum again.", false);
+    newCaptcha();
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = "Submitting...";
+  const booking = {
+    name: document.getElementById("bkName").value.trim(),
+    phone: document.getElementById("bkPhone").value.trim(),
+    email: document.getElementById("bkEmail").value.trim(),
+    workshop: document.getElementById("bkWorkshop").value,
+    vehicleType: document.getElementById("bkVehicleType").value.trim(),
+    plate: document.getElementById("bkPlate").value.trim(),
+    serviceType: document.getElementById("bkService").value,
+    date: document.getElementById("bkDate").value,
+    time: document.getElementById("bkTime").value,
+    notes: document.getElementById("bkNotes").value.trim(),
+    website: document.getElementById("bkWebsite").value // honeypot — must stay empty
+  };
+
+  const result = await apiCall("bookAppointment", { booking });
+  btn.disabled = false; btn.textContent = "Request Appointment";
+
+  if (result.success) {
+    showMsg(msg, "Thanks! Your appointment request has been received — we'll confirm by email shortly.", true);
+    bookingForm.reset();
+    newCaptcha();
+  } else {
+    showMsg(msg, result.message || "Something went wrong. Please try again.", false);
+  }
 });
 
+/* -------------------------------------------------------------------------
+   Login  (+ FEATURE 4 OTP step, + FEATURE 5 lockout messaging, + FEATURE 6 forgot password)
+------------------------------------------------------------------------- */
+const loginForm = document.getElementById("loginForm");
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById("loginSubmit");
+  const msg = document.getElementById("loginMsg");
+  btn.disabled = true; btn.textContent = "Logging in...";
 
-const hospitalData = [
-    // Pastikan URL di sini adalah URL Apps Script yang betul
-    // Jika tiada URL, biarkan string kosong seperti ini: ''
-    //---N9-------
-    { name: "Hospital Tuanku Ja'afar, Seremban", 
-        id: "TUANKU-JAAFAR", sheetsUrl: "https://script.google.com/macros/s/AKfycbyURuTW-q5YGseD763PXLfWP198nBg-DLToJxPJ3FciH7pQ12gebbU0xL0WEcrhkHiH/exec" },
-    { name: "Hospital Tuanku Ampuan Najihah, Kuala Pilah", 
-        id: "KPL-KUALA-PILAH", sheetsUrl: "https://script.google.com/macros/s/AKfycbwdVEKA2JEVpz3eN6qMU8zu_t_zIkp7QSdvl1xdj0_J0Vm32gjrsH8Sv2DGGLmm5u6b9A/exec" },
-    { name: "Hospital Jempol", 
-        id: "JMP-JEMPOL", sheetsUrl: "https://script.google.com/macros/s/AKfycbyu-9HxaLzE__60qiYYsHcPcjhFDvaLywQvSCrR97_7A9IwvknRko5z_NdiFER-NmGx/exec" },
-    { name: "Hospital Jelebu",
-        id: "JLB-JELEBU", sheetsUrl:"https://script.google.com/macros/s/AKfycbzBh0WwZg5l35cSwuhJ26IinlJtGPcyuAP75PCTpx4A5nbzThj_WfFEl1vwSFAfZz80ng/exec" },
-    { name: "Hospital Port Dickson", 
-        id: "PDX-PORT-DICKSON", sheetsUrl:"https://script.google.com/macros/s/AKfycbzEqrZI2uaMrzFo52BXS5bzj2WmKlUjEaJSog-08TCfAqZNigdysGHDRVB_0msmzzI/exec"},
-    { name: "Hospital Tampin", 
-        id: "TMP-TAMPIN", sheetsUrl: "https://script.google.com/macros/s/AKfycbxwKWMWIV-flIYJOWXdQf0egPCXMK2VAGMAOYfa68M9t9C8h8WHyY_DoKsTA3pD33EupQ/exec" },
+  const username = document.getElementById("loginUser").value.trim();
+  const password = document.getElementById("loginPass").value;
+  const result = await apiCall("login", { username, password });
 
-    // --- MELAKA ---
-    { name: "Hospital Melaka", 
-        id: "MKA-MLK", sheetsUrl: "https://script.google.com/macros/s/AKfycbwPQ2CAQmC48zHSO-JoPrJyMVx1js3UbnytQcs6rzjLBP8PuYE2DxusRBPnjZHPLy9r/exec "},
-    { name: "Hospital Jasin", 
-        id: "JSN-JASIN", sheetsUrl: "https://script.google.com/macros/s/AKfycbzXtO-TJ-cXXJQIbWBjs2RjQtsEKNPsBjOEV5ns2W4-qqodgMFpZmh9Z0AG_mOPwkeZ/exec" },
-    { name: "Hospital Alor Gajah", 
-        id: "AGJ-ALOR-GAJAH", sheetsUrl: "https://script.google.com/macros/s/AKfycbw2qjTumpYARgSe0E0IrRZq7g5RrISPBedT96ItkAySjiy-ARH_nSpQwS_5LE8JOHTn/exec" },
+  btn.disabled = false; btn.textContent = "Log In";
 
-    // --- JOHOR ---
-    { name: "Hospital Sultanah Aminah, Johor Bahru", 
-        id: "HSA-JOHOR", sheetsUrl: "https://script.google.com/macros/s/AKfycbzwqsGcDaPKNKrdsmhuiP0nS2pGYuBB-97dRnuYqg4XBuYbIvq_-2FpqDcg1NOXcC_k/exec" },
-    { name: "Hospital Sultan Ismail, Johor Bahru", 
-        id: "HSI-JOHOR", sheetsUrl: "https://script.google.com/macros/s/AKfycbzSz536dHUFldW5uM09yuWdrlp-2wdN89GXVGvterROLKsNrH0Ccp89Ka59zhbhyaJ8og/exec" },
-    { name: "Hospital Pakar Sultanah Fatimah, Muar", 
-        id: "HPSF-MUAR", sheetsUrl: "https://script.google.com/macros/s/AKfycbwr4glm_HZtke2nkD5LgsGl20G_gD_hZSWIQqX_Q3mKIW_k368sXrqpGXWzsvtjK3un/exec" },
-    { name: "Hospital Kluang", 
-        id: "KLN-KLUANG", sheetsUrl: "https://script.google.com/macros/s/AKfycbzcZs8X_V6Ed1GLdgJ9Kg78NiaYXBiDZMwm95g9Dddz8rkhyj8D-YptSAx4sO_T0319/exec" },
-    { name: "Hospital Batu Pahat", 
-        id: "BPH-BATU-PAHAT", sheetsUrl: "https://script.google.com/macros/s/AKfycbyTvLZAO7cmxAiX-i6ZyjoChvl4bB0N0iyLeXK7n8gsCzQNzfedibIiEcQhLOl61Z2Ugg/exec" },
-    { name: "Hospital Pontian", 
-        id: "PON-PONTIAN", sheetsUrl: "https://script.google.com/macros/s/AKfycbyTPjnBYxZ2asURDlZUplLz2g-zD1ddsFNKoOkBmicKaY0COS_ODdo3OHzTkUuRG60V/exec" },
-    { name: "Hospital Segamat", 
-        id: "SEG-SEGAMAT", sheetsUrl: "https://script.google.com/macros/s/AKfycbzVLuWcF9I0QgB7UjKBmfEZbDhKhfVBOvelndBt9XWOh2u92zjWAZUf_akhxusZqUUNAQ/exec" },
-    { name: "Hospital Temenggong Seri Maharaja Tun Ibrahim, Kulai", 
-        id: "HTSMTI-KULAI", sheetsUrl: "https://script.google.com/macros/s/AKfycbxbZ55Q_vo-MuMvxbKGlcRZVvwMSfQonOUVS4BjDU6S5EIX-VWwazRK3viR9f7zm647CA/exec" },
-    { name: "Hospital Kota Tinggi", 
-        id: "KTG-KOTA-TINGGI", sheetsUrl: "https://script.google.com/macros/s/AKfycbxr1iWVaL1eGuy_HhcccDPrm_6ipUG898uWzxrFFQqSWuSAnrHYR8vRmLlBU-QXymyt/exec" },
-    { name: "Hospital Mersing", 
-        id: "MER-MERSING", sheetsUrl: "https://script.google.com/macros/s/AKfycbwkVr2WnVB_Ow1AttIXH4psBmSQ8m_OdaN-z3_JgUmq7mmrtYfogZUVPLl_t7QdrWV8/exec" },
-    { name: "Hospital Tangkak", 
-        id: "TGK-TANGKAK", sheetsUrl: "https://script.google.com/macros/s/AKfycbxNNdAZ7uOam6IljzwGJWFBd7VY9j-Ehu3QzgtnTo7bUltKg80aqSrE7NRh-dnDE8SQ/exec" },
-    { name: "Makmal Kesihatan Awam Johor", 
-        id: "MKJ-JB", sheetsUrl: "https://script.google.com/macros/s/AKfycby3NnHSa3pDqhb93lJWrYJ_GTs2VzIx-WgHKiCOcngQHid18zLhv1Zfvs6SoeVHCxLNzw/exec" },
-    { name: "Hospital Permai", 
-        id: "PER-PERMAI", sheetsUrl: "https://script.google.com/macros/s/AKfycbxUfZwgjlTEHMHjOkKV7U0FCk3_4Z4FYVewrCkkfO6c50rF3xg3Seg1fxvWvbwu2Zi3Xw/exec" },
-    { name: "Hospital Pasir Gudang", 
-        id: "PGD-PASIR-GUDANG", sheetsUrl: "https://script.google.com/macros/s/AKfycbwbfX7uEBSOqFf2AlHdMbwE0ZJqZ9qC90_a9cfIjHSS7Vk0RCKvPcUNtusB6rQBjlK2/exec" },
-     { name: "Hospital Pantai", 
-        id: "PAN-Pantai", sheetsUrl: "" },
-    // Tambah hospital di sini dengan ID dan URL mereka
-];
+  if (result.success && result.otpRequired) {
+    pendingOtpUsername = result.username;
+    document.getElementById("loginPanel").classList.add("hidden");
+    document.getElementById("otpPanel").classList.remove("hidden");
+    document.getElementById("otpHint").textContent = "We emailed a 6-digit code to the account " + result.username + ".";
+    msg.className = "form-msg";
+  } else if (result.success) {
+    setSession(result.user);
+    loginForm.reset();
+    msg.className = "form-msg";
+    enterDashboard(result.user);
+  } else {
+    showMsg(msg, result.message || "Invalid username or password.", false);
+  }
+});
 
-const criticalSystems = [
-    { name: "Electrical Supply", id: "Electrical Supply"},
-    { name: "Generator Set", id: "Generator Set"},
-    { name: "Water Supply System", id: "Water Supply System"},
-    { name: "Autoclave", id: "Autoclave"},
-    { name: "Medical Gas Pipeline System", id: "Medical Gas Pipeline System"},
-    { name: "Vertical Transportation", id: "Lift"},
-    { name: "Air Handling Unit", id: "Air Handling Unit"},
-    { name: "BAS System", id: "BAS System"},
-    { name: "Chiller And Cooling Tower", id: "Chiller And Cooling Tower" },
-    { name: "Fire Protection System", id: "Fire Protection System" },
-];
+const otpForm = document.getElementById("otpForm");
+otpForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("otpMsg");
+  const code = document.getElementById("otpCode").value.trim();
+  const result = await apiCall("verifyOtp", { username: pendingOtpUsername, code });
+  if (result.success) {
+    setSession(result.user);
+    otpForm.reset();
+    document.getElementById("otpPanel").classList.add("hidden");
+    enterDashboard(result.user);
+  } else {
+    showMsg(msg, result.message || "Incorrect code.", false);
+  }
+});
+document.getElementById("otpBack").addEventListener("click", () => {
+  document.getElementById("otpPanel").classList.add("hidden");
+  document.getElementById("loginPanel").classList.remove("hidden");
+  otpForm.reset();
+});
 
-//---------------------------------link submission form--------------------------------------------------
-const submissionForms = {
-    //NEGERI SEMBILAN
-    'TUANKU-JAAFAR_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
-    'TUANKU-JAAFAR_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
-    'TUANKU-JAAFAR_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
-    'TUANKU-JAAFAR_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
-    'TUANKU-JAAFAR_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
-    'TUANKU-JAAFAR_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
-    'TUANKU-JAAFAR_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
-    'TUANKU-JAAFAR_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
-    'TUANKU-JAAFAR_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
-    'TUANKU-JAAFAR_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/HTJ.html',
+document.getElementById("showForgotPassword").addEventListener("click", (e) => {
+  e.preventDefault();
+  document.getElementById("loginPanel").classList.add("hidden");
+  document.getElementById("forgotPanel").classList.remove("hidden");
+});
+document.getElementById("forgotBack").addEventListener("click", () => {
+  document.getElementById("forgotPanel").classList.add("hidden");
+  document.getElementById("loginPanel").classList.remove("hidden");
+});
+document.getElementById("forgotRequestForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("forgotRequestMsg");
+  const usernameOrEmail = document.getElementById("forgotIdentifier").value.trim();
+  const result = await apiCall("requestPasswordReset", { usernameOrEmail });
+  showMsg(msg, result.message || "If that account exists, a reset code has been emailed to it.", true);
+  document.getElementById("resetUsername").value = usernameOrEmail;
+  document.getElementById("forgotResetForm").classList.remove("hidden");
+});
+document.getElementById("forgotResetForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("forgotResetMsg");
+  const username = document.getElementById("resetUsername").value.trim();
+  const code = document.getElementById("resetCode").value.trim();
+  const newPassword = document.getElementById("resetNewPassword").value;
+  const result = await apiCall("resetPassword", { username, code, newPassword });
+  if (result.success) {
+    showMsg(msg, "Password updated! You can now log in.", true);
+    setTimeout(() => {
+      document.getElementById("forgotPanel").classList.add("hidden");
+      document.getElementById("loginPanel").classList.remove("hidden");
+      document.getElementById("forgotResetForm").classList.add("hidden");
+      document.getElementById("forgotRequestForm").reset();
+      document.getElementById("forgotResetForm").reset();
+    }, 1500);
+  } else {
+    showMsg(msg, result.message || "Could not reset password.", false);
+  }
+});
 
-    'JMP-JEMPOL_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
-    'JMP-JEMPOL_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
-    'JMP-JEMPOL_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
-    'JMP-JEMPOL_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
-    'JMP-JEMPOL_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
-    'JMP-JEMPOL_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
-    'JMP-JEMPOL_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
-    'JMP-JEMPOL_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
-    'JMP-JEMPOL_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
-    'JMP-JEMPOL_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/JMP.html',
+/* -------------------------------------------------------------------------
+   Entering dashboards
+------------------------------------------------------------------------- */
+function enterDashboard(user) {
+  document.getElementById("loginPanel").classList.add("hidden");
+  document.getElementById("otpPanel").classList.add("hidden");
+  document.getElementById("forgotPanel").classList.add("hidden");
 
-    'TMP-TAMPIN_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-    'TMP-TAMPIN_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-    'TMP-TAMPIN_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-    'TMP-TAMPIN_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-    'TMP-TAMPIN_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-    'TMP-TAMPIN_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-    'TMP-TAMPIN_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-    'TMP-TAMPIN_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-    'TMP-TAMPIN_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-    'TMP-TAMPIN_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/TMP.html',
-
-    'PDX-PORT-DICKSON_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-    'PDX-PORT-DICKSON_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-    'PDX-PORT-DICKSON_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-    'PDX-PORT-DICKSON_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-    'PDX-PORT-DICKSON_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-    'PDX-PORT-DICKSON_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-    'PDX-PORT-DICKSON_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-    'PDX-PORT-DICKSON_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-    'PDX-PORT-DICKSON_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-    'PDX-PORT-DICKSON_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/PDX.html',
-
-    'JLB-JELEBU_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-    'JLB-JELEBU_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-    'JLB-JELEBU_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-    'JLB-JELEBU_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-    'JLB-JELEBU_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-    'JLB-JELEBU_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-    'JLB-JELEBU_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-    'JLB-JELEBU_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-    'JLB-JELEBU_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-    'JLB-JELEBU_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/JLB.html',
-
-    'KPL-KUALA-PILAH_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    'KPL-KUALA-PILAH_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    'KPL-KUALA-PILAH_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    'KPL-KUALA-PILAH_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    'KPL-KUALA-PILAH_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    'KPL-KUALA-PILAH_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    'KPL-KUALA-PILAH_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    'KPL-KUALA-PILAH_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    'KPL-KUALA-PILAH_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    'KPL-KUALA-PILAH_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/KPL.html',
-    
-    //MELAKA
-    'MKA-MLK_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-    'MKA-MLK_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-    'MKA-MLK_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-    'MKA-MLK_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-    'MKA-MLK_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-    'MKA-MLK_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-    'MKA-MLK_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-    'MKA-MLK_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-    'MKA-MLK_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-    'MKA-MLK_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/MKA.html',
-
-    'AGJ-ALOR-GAJAH_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-    'AGJ-ALOR-GAJAH_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-    'AGJ-ALOR-GAJAH_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-    'AGJ-ALOR-GAJAH_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-    'AGJ-ALOR-GAJAH_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-    'AGJ-ALOR-GAJAH_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-    'AGJ-ALOR-GAJAH_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-    'AGJ-ALOR-GAJAH_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-    'AGJ-ALOR-GAJAH_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-    'AGJ-ALOR-GAJAH_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/AGJ.html',
-
-    'JSN-JASIN_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-    'JSN-JASIN_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-    'JSN-JASIN_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-    'JSN-JASIN_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-    'JSN-JASIN_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-    'JSN-JASIN_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-    'JSN-JASIN_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-    'JSN-JASIN_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-    'JSN-JASIN_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-    'JSN-JASIN_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/JSN.html',
-
-    //JOHOR DARUL TAKZIM (JDT)
-    'HSA-JOHOR_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-    'HSA-JOHOR_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-    'HSA-JOHOR_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-    'HSA-JOHOR_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-    'HSA-JOHOR_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-    'HSA-JOHOR_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-    'HSA-JOHOR_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-    'HSA-JOHOR_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-    'HSA-JOHOR_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-    'HSA-JOHOR_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/HSA.html',
-
-    'HSI-JOHOR_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-    'HSI-JOHOR_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-    'HSI-JOHOR_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-    'HSI-JOHOR_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-    'HSI-JOHOR_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-    'HSI-JOHOR_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-    'HSI-JOHOR_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-    'HSI-JOHOR_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-    'HSI-JOHOR_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-    'HSI-JOHOR_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/HSI.html',
-
-    'HPSF-MUAR_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-    'HPSF-MUAR_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-    'HPSF-MUAR_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-    'HPSF-MUAR_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-    'HPSF-MUAR_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-    'HPSF-MUAR_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-    'HPSF-MUAR_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-    'HPSF-MUAR_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-    'HPSF-MUAR_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-    'HPSF-MUAR_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/HPSF.html',
-
-    'KLN-KLUANG_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-    'KLN-KLUANG_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-    'KLN-KLUANG_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-    'KLN-KLUANG_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-    'KLN-KLUANG_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-    'KLN-KLUANG_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-    'KLN-KLUANG_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-    'KLN-KLUANG_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-    'KLN-KLUANG_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-    'KLN-KLUANG_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/KLN.html',
-
-    'BPH-BATU-PAHAT_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-    'BPH-BATU-PAHAT_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-    'BPH-BATU-PAHAT_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-    'BPH-BATU-PAHAT_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-    'BPH-BATU-PAHAT_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-    'BPH-BATU-PAHAT_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-    'BPH-BATU-PAHAT_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-    'BPH-BATU-PAHAT_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-    'BPH-BATU-PAHAT_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-    'BPH-BATU-PAHAT_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/BPH.html',
-
-    'PON-PONTIAN_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-    'PON-PONTIAN_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-    'PON-PONTIAN_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-    'PON-PONTIAN_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-    'PON-PONTIAN_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-    'PON-PONTIAN_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-    'PON-PONTIAN_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-    'PON-PONTIAN_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-    'PON-PONTIAN_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-    'PON-PONTIAN_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/PON.html',
-
-    'SEG-SEGAMAT_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-    'SEG-SEGAMAT_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-    'SEG-SEGAMAT_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-    'SEG-SEGAMAT_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-    'SEG-SEGAMAT_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-    'SEG-SEGAMAT_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-    'SEG-SEGAMAT_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-    'SEG-SEGAMAT_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-    'SEG-SEGAMAT_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-    'SEG-SEGAMAT_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/SEG.html',
-
-    'HTSMTI-KULAI_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-    'HTSMTI-KULAI_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-    'HTSMTI-KULAI_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-    'HTSMTI-KULAI_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-    'HTSMTI-KULAI_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-    'HTSMTI-KULAI_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-    'HTSMTI-KULAI_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-    'HTSMTI-KULAI_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-    'HTSMTI-KULAI_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-    'HTSMTI-KULAI_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/HTSMTI.html',
-
-    'KTG-KOTA-TINGGI_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-    'KTG-KOTA-TINGGI_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-    'KTG-KOTA-TINGGI_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-    'KTG-KOTA-TINGGI_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-    'KTG-KOTA-TINGGI_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-    'KTG-KOTA-TINGGI_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-    'KTG-KOTA-TINGGI_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-    'KTG-KOTA-TINGGI_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-    'KTG-KOTA-TINGGI_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-    'KTG-KOTA-TINGGI_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/KTG.html',
-
-    'MER-MERSING_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-    'MER-MERSING_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-    'MER-MERSING_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-    'MER-MERSING_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-    'MER-MERSING_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-    'MER-MERSING_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-    'MER-MERSING_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-    'MER-MERSING_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-    'MER-MERSING_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-    'MER-MERSING_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/MER.html',
-
-    'TGK-TANGKAK_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-    'TGK-TANGKAK_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-    'TGK-TANGKAK_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-    'TGK-TANGKAK_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-    'TGK-TANGKAK_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-    'TGK-TANGKAK_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-    'TGK-TANGKAK_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-    'TGK-TANGKAK_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-    'TGK-TANGKAK_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-    'TGK-TANGKAK_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/TGK.html',
-
-    'MKJ-JB_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-    'MKJ-JB_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-    'MKJ-JB_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-    'MKJ-JB_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-    'MKJ-JB_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-    'MKJ-JB_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-    'MKJ-JB_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-    'MKJ-JB_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-    'MKJ-JB_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-    'MKJ-JB_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/MKJ.html',
-
-    'PER-PERMAI_Electrical Supply': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-    'PER-PERMAI_Generator Set': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-    'PER-PERMAI_Autoclave': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-    'PER-PERMAI_Lift': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-    'PER-PERMAI_Fire Protection System': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-    'PER-PERMAI_Chiller And Cooling Tower': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-    'PER-PERMAI_Water Supply System': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-    'PER-PERMAI_Air Handling Unit': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-    'PER-PERMAI_Medical Gas Pipeline System': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-    'PER-PERMAI_BAS System': 'https://femsmedivest-sys.github.io/Submission-Form/PER.html',
-};
-
-// Fungsi untuk mengemas kini kad hospital sedia ada di halaman utama
-function updateHospitalCards() {
-    const fetchPromises = [];
-    const loadingSpinner = document.getElementById('loading-spinner');
-
-    if (loadingSpinner) {
-        loadingSpinner.style.display = 'block';
+  if (user.role === "member") {
+    document.getElementById("memberDashboard").classList.remove("hidden");
+    document.getElementById("staffDashboard").classList.add("hidden");
+    document.getElementById("memName").textContent = user.fullName;
+    loadMemberProfile(user);
+    loadMemberVehicles();
+    loadMemberHistory();
+  } else {
+    document.getElementById("staffDashboard").classList.remove("hidden");
+    document.getElementById("memberDashboard").classList.add("hidden");
+    document.getElementById("staffName").textContent = user.fullName;
+    document.getElementById("staffRoleBadge").textContent = user.role.toUpperCase();
+    setupStaffScope(user);
+    loadStaffHistory();
+    loadStaffMembers();
+    loadBookings();
+    loadAnalytics();
+    if (user.role === "webmaster") {
+      document.getElementById("tabAccounts").classList.remove("hidden");
+      document.getElementById("tabAuditLog").classList.remove("hidden");
+      loadAccounts();
+      loadAuditLog();
     }
+  }
+}
 
-    hospitalData.forEach(hospital => {
-        // Cari elemen kad yang sedia ada
-        const cardElement = document.getElementById(`card-${hospital.id}`);
-        if (cardElement && hospital.sheetsUrl) {
-            const fetchPromise = fetch(hospital.sheetsUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    const functioningCount = data.filter(item => item.Status && item.Status.trim().toUpperCase() === 'FUNCTIONING').length;
-                    const notFunctioningCount = data.filter(item => item.Status && item.Status.trim().toUpperCase() === 'NOT FUNCTIONING').length;
+function setupStaffScope(user) {
+  const wsFilter = document.getElementById("staffWorkshopFilter");
+  const memFilter = document.getElementById("staffMemberWorkshopFilter");
+  const bkFilter = document.getElementById("staffBookingWorkshopFilter");
+  const ahWorkshop = document.getElementById("ahWorkshop");
+  const amWorkshop = document.getElementById("amWorkshop");
 
-                    // Cari span dalam kad dan kemas kini nilainya
-                    const functioningSpan = cardElement.querySelector('.status-FUNCTIONING');
-                    const notFunctioningSpan = cardElement.querySelector('.status-NOT-FUNCTIONING');
+  if (user.role === "admin") {
+    [wsFilter, memFilter, bkFilter].forEach(sel => { sel.innerHTML = `<option value="${user.workshop}">${user.workshop}</option>`; sel.disabled = true; });
+    ahWorkshop.value = user.workshop; ahWorkshop.disabled = true;
+    amWorkshop.value = user.workshop; amWorkshop.disabled = true;
+    document.getElementById("staffScope").textContent = user.workshop;
+  } else {
+    document.getElementById("staffScope").textContent = "All Locations";
+  }
+}
 
-                    if (functioningSpan) {
-                        functioningSpan.textContent = `FUNCTIONING: ${functioningCount}`;
-                    }
-                    if (notFunctioningSpan) {
-                        notFunctioningSpan.textContent = `NOT FUNCTIONING: ${notFunctioningCount}`;
-                    }
-                })
-                .catch(error => {
-                    console.error(`Error fetching data for ${hospital.name}:`, error);
-                    const statusContainer = cardElement.querySelector('.status-container');
-                    if (statusContainer) {
-                        statusContainer.innerHTML = '<p style="color:red; font-size: 0.8em; margin: 0; padding: 0;">Data not available</p>';
-                    }
-                });
-            fetchPromises.push(fetchPromise);
-        } else if (cardElement) {
-             const statusContainer = cardElement.querySelector('.status-container');
-             if (statusContainer) {
-                 statusContainer.innerHTML = '<p style="color:red; font-size: 0.8em; margin: 0; padding: 0;">No URL API provided</p>';
-             }
-        }
+function logoutAll() {
+  const session = getSession();
+  if (session) apiCall("logout", { token: session.token });
+  clearSession();
+  document.getElementById("memberDashboard").classList.add("hidden");
+  document.getElementById("staffDashboard").classList.add("hidden");
+  document.getElementById("loginPanel").classList.remove("hidden");
+}
+document.getElementById("memLogout").addEventListener("click", logoutAll);
+document.getElementById("staffLogout").addEventListener("click", logoutAll);
+
+/* -------------------------------------------------------------------------
+   Dashboard tab switching
+------------------------------------------------------------------------- */
+document.querySelectorAll(".dash-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    const group = tab.closest("#memberDashboard, #staffDashboard");
+    group.querySelectorAll(".dash-tab").forEach(t => t.classList.remove("active"));
+    group.querySelectorAll(".dash-panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(tab.dataset.tab).classList.add("active");
+    if (tab.dataset.tab === "staffAnalyticsPanel") loadAnalytics();
+  });
+});
+
+/* -------------------------------------------------------------------------
+   FEATURE 12 — export helpers (CSV + print/PDF)
+------------------------------------------------------------------------- */
+function tableToCSV(table) {
+  const rows = [...table.querySelectorAll("tr")].filter(tr => !tr.classList.contains("empty-row"));
+  return rows.map(tr => [...tr.children].map(td => {
+    const text = td.textContent.replace(/"/g, '""');
+    return `"${text}"`;
+  }).join(",")).join("\n");
+}
+function downloadCSV(tableId, filename) {
+  const table = document.getElementById(tableId);
+  const csv = tableToCSV(table);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+document.getElementById("memExportCsv").addEventListener("click", () => downloadCSV("memHistoryTable", "my-service-history.csv"));
+document.getElementById("memPrint").addEventListener("click", () => window.print());
+document.getElementById("staffExportCsv").addEventListener("click", () => downloadCSV("staffHistoryTable", "service-history.csv"));
+document.getElementById("staffPrint").addEventListener("click", () => window.print());
+
+/* -------------------------------------------------------------------------
+   Member dashboard data  (+ FEATURE 9 vehicles, + FEATURE 1 next-due display)
+------------------------------------------------------------------------- */
+function loadMemberProfile(user) {
+  document.getElementById("memProfName").value = user.fullName || "";
+  document.getElementById("memProfAddress").value = user.address || "";
+  document.getElementById("memProfPhone").value = user.phone || "";
+  document.getElementById("memProfEmail").value = user.email || "";
+}
+
+async function loadMemberVehicles() {
+  const session = getSession();
+  const result = await apiCall("getVehicles", { token: session.token });
+  const select = document.getElementById("memVehicleFilter");
+  const listEl = document.getElementById("memVehicleList");
+  select.innerHTML = `<option value="All">All my vehicles</option>`;
+  if (!result.success || !result.vehicles.length) {
+    listEl.innerHTML = `<p>No vehicles on file yet — they'll appear automatically after your first service.</p>`;
+    return;
+  }
+  result.vehicles.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v.plate;
+    opt.textContent = `${v.plate} — ${v.vehicleType}`;
+    select.appendChild(opt);
+  });
+  listEl.innerHTML = result.vehicles.map(v => `
+    <div class="feature-card" style="margin-bottom:14px">
+      <h3>${v.plate}</h3><p>${v.vehicleType}</p>
+    </div>`).join("");
+}
+document.getElementById("memVehicleFilter").addEventListener("change", loadMemberHistory);
+
+async function loadMemberHistory() {
+  const session = getSession();
+  const tbody = document.getElementById("memHistoryBody");
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Loading...</td></tr>`;
+  const plate = document.getElementById("memVehicleFilter").value;
+  const result = await apiCall("getHistory", { token: session.token, plate });
+
+  if (!result.success) { tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${result.message || "Could not load history."}</td></tr>`; return; }
+  const rows = result.history || [];
+  tbody.innerHTML = rows.length ? rows.map(r => `
+      <tr><td>${r.date}</td><td>${r.vehicleType}</td><td>${r.plate}</td><td>${r.workshop}</td><td>${r.serviceType}</td><td>${money(r.price)}</td><td>${r.notes || ""}</td></tr>`).join("")
+    : `<tr class="empty-row"><td colspan="7">No service history yet.</td></tr>`;
+
+  document.getElementById("memTotalServices").textContent = rows.length;
+  document.getElementById("memTotalSpent").textContent = money(rows.reduce((s, r) => s + Number(r.price || 0), 0));
+  document.getElementById("memLastDate").textContent = rows.length ? rows[0].date : "—";
+  document.getElementById("memNextDue").textContent = result.nextServiceDue || "—";
+}
+
+document.getElementById("memPasswordForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const session = getSession();
+  const msg = document.getElementById("memPasswordMsg");
+  const oldPassword = document.getElementById("memOldPass").value;
+  const newPassword = document.getElementById("memNewPass").value;
+  const result = await apiCall("changePassword", { token: session.token, oldPassword, newPassword });
+  if (result.success) { showMsg(msg, "Password updated successfully.", true); e.target.reset(); }
+  else showMsg(msg, result.message || "Could not update password.", false);
+});
+
+/* -------------------------------------------------------------------------
+   Staff dashboard — Service History
+------------------------------------------------------------------------- */
+async function loadStaffHistory() {
+  const session = getSession();
+  const tbody = document.getElementById("staffHistoryBody");
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="9">Loading...</td></tr>`;
+  const workshop = document.getElementById("staffWorkshopFilter").value;
+  const search = document.getElementById("staffSearch").value.trim().toLowerCase();
+
+  const result = await apiCall("getHistory", { token: session.token, workshop });
+  if (!result.success) { tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${result.message || "Could not load history."}</td></tr>`; return; }
+  let rows = result.history || [];
+  if (search) rows = rows.filter(r => (r.plate || "").toLowerCase().includes(search) || (r.name || "").toLowerCase().includes(search));
+
+  tbody.innerHTML = rows.length ? rows.map(r => `
+      <tr><td>${r.date}</td><td>${r.name}</td><td>${r.address || ""}</td><td>${r.vehicleType}</td><td>${r.plate}</td><td>${r.workshop}</td><td>${r.serviceType}</td><td>${money(r.price)}</td><td>${r.notes || ""}</td></tr>`).join("")
+    : `<tr class="empty-row"><td colspan="9">No service records found.</td></tr>`;
+
+  document.getElementById("staffTotalServices").textContent = rows.length;
+  document.getElementById("staffTotalRevenue").textContent = money(rows.reduce((s, r) => s + Number(r.price || 0), 0));
+}
+document.getElementById("staffRefresh").addEventListener("click", loadStaffHistory);
+document.getElementById("staffWorkshopFilter").addEventListener("change", loadStaffHistory);
+document.getElementById("staffSearch").addEventListener("input", () => { clearTimeout(window._searchDebounce); window._searchDebounce = setTimeout(loadStaffHistory, 300); });
+
+document.getElementById("addHistoryForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const session = getSession();
+  const msg = document.getElementById("addHistoryMsg");
+  const record = {
+    date: document.getElementById("ahDate").value,
+    username: document.getElementById("ahUsername").value.trim(),
+    name: document.getElementById("ahName").value.trim(),
+    address: document.getElementById("ahAddress").value.trim(),
+    vehicleType: document.getElementById("ahVehicleType").value.trim(),
+    plate: document.getElementById("ahPlate").value.trim(),
+    workshop: document.getElementById("ahWorkshop").value,
+    serviceType: document.getElementById("ahServiceType").value,
+    price: document.getElementById("ahPrice").value,
+    notes: document.getElementById("ahNotes").value.trim()
+  };
+  const result = await apiCall("addHistory", { token: session.token, record, siteUrl: siteUrl() });
+  if (result.success) {
+    showMsg(msg, "Service record saved — invoice emailed to the customer if we have their email on file.", true);
+    e.target.reset();
+    if (getSession().role === "admin") document.getElementById("ahWorkshop").value = getSession().workshop;
+    loadStaffHistory();
+    loadAnalytics();
+  } else {
+    showMsg(msg, result.message || "Could not save record.", false);
+  }
+});
+
+/* -------------------------------------------------------------------------
+   Staff dashboard — Members
+------------------------------------------------------------------------- */
+async function loadStaffMembers() {
+  const session = getSession();
+  const tbody = document.getElementById("staffMembersBody");
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="7">Loading...</td></tr>`;
+  const workshop = document.getElementById("staffMemberWorkshopFilter").value;
+  const result = await apiCall("getMembers", { token: session.token, workshop });
+  if (!result.success) { tbody.innerHTML = `<tr class="empty-row"><td colspan="7">${result.message || "Could not load members."}</td></tr>`; return; }
+  const rows = result.members || [];
+  tbody.innerHTML = rows.length ? rows.map(m => `
+      <tr><td>${m.username}</td><td>${m.fullName}</td><td>${m.address || ""}</td><td>${m.phone || ""}</td><td>${m.email || ""}</td><td>${m.workshop}</td>
+      <td><span class="tag ${m.status === 'Active' ? 'active' : 'inactive'}">${m.status}</span></td></tr>`).join("")
+    : `<tr class="empty-row"><td colspan="7">No members found.</td></tr>`;
+  document.getElementById("staffTotalMembers").textContent = rows.length;
+}
+document.getElementById("staffMembersRefresh").addEventListener("click", loadStaffMembers);
+document.getElementById("staffMemberWorkshopFilter").addEventListener("change", loadStaffMembers);
+
+document.getElementById("addMemberForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const session = getSession();
+  const msg = document.getElementById("addMemberMsg");
+  const member = {
+    username: document.getElementById("amUsername").value.trim(),
+    password: document.getElementById("amPassword").value,
+    fullName: document.getElementById("amName").value.trim(),
+    phone: document.getElementById("amPhone").value.trim(),
+    address: document.getElementById("amAddress").value.trim(),
+    email: document.getElementById("amEmail").value.trim(),
+    workshop: document.getElementById("amWorkshop").value,
+    role: "member"
+  };
+  const result = await apiCall("addMember", { token: session.token, member });
+  if (result.success) {
+    showMsg(msg, "Member account created.", true);
+    e.target.reset();
+    if (getSession().role === "admin") document.getElementById("amWorkshop").value = getSession().workshop;
+    loadStaffMembers();
+  } else {
+    showMsg(msg, result.message || "Could not create member.", false);
+  }
+});
+
+/* -------------------------------------------------------------------------
+   FEATURE 2 — Booking approval workflow
+------------------------------------------------------------------------- */
+async function loadBookings() {
+  const session = getSession();
+  const tbody = document.getElementById("bookingsBody");
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="9">Loading...</td></tr>`;
+  const workshop = document.getElementById("staffBookingWorkshopFilter").value;
+  const result = await apiCall("getBookings", { token: session.token, workshop });
+  if (!result.success) { tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${result.message || "Could not load bookings."}</td></tr>`; return; }
+  const rows = result.bookings || [];
+  tbody.innerHTML = rows.length ? rows.map(b => `
+      <tr>
+        <td>${b.date} ${b.time}</td><td>${b.name}</td><td>${b.phone}</td><td>${b.vehicleType} (${b.plate})</td>
+        <td>${b.workshop}</td><td>${b.serviceType}</td>
+        <td><span class="tag ${b.status === 'Confirmed' ? 'active' : (b.status === 'Rejected' ? 'inactive' : '')}">${b.status}</span></td>
+        <td>${b.notes || ""}</td>
+        <td>
+          <button class="btn btn-ghost btn-small" data-act="Confirmed" data-id="${b.id}">Confirm</button>
+          <button class="btn btn-ghost btn-small" data-act="Rejected" data-id="${b.id}">Reject</button>
+          <button class="btn btn-ghost btn-small" data-act="reschedule" data-id="${b.id}">Reschedule</button>
+        </td>
+      </tr>`).join("")
+    : `<tr class="empty-row"><td colspan="9">No booking requests found.</td></tr>`;
+
+  tbody.querySelectorAll("button[data-act]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      if (btn.dataset.act === "reschedule") {
+        const newDate = prompt("New date (YYYY-MM-DD):");
+        if (!newDate) return;
+        const newTime = prompt("New time (HH:MM):");
+        await apiCall("updateBookingStatus", { token: session.token, bookingId: id, status: "Rescheduled", newDate, newTime });
+      } else {
+        await apiCall("updateBookingStatus", { token: session.token, bookingId: id, status: btn.dataset.act });
+      }
+      loadBookings();
     });
+  });
+}
+document.getElementById("staffBookingWorkshopFilter").addEventListener("change", loadBookings);
+document.getElementById("bookingsRefresh").addEventListener("click", loadBookings);
 
-    Promise.all(fetchPromises.map(p => p.catch(e => e))).finally(() => {
-        if (loadingSpinner) {
-            loadingSpinner.style.display = 'none';
-        }
+/* -------------------------------------------------------------------------
+   FEATURE 7 — Analytics dashboard (Chart.js)
+------------------------------------------------------------------------- */
+async function loadAnalytics() {
+  const session = getSession();
+  const canvas = document.getElementById("analyticsChart");
+  const result = await apiCall("getAnalytics", { token: session.token });
+  if (!result.success) return;
+
+  document.getElementById("anaTotalRevenue").textContent = money(result.totalRevenue);
+  document.getElementById("anaTotalJobs").textContent = result.totalJobs;
+
+  const palette = { "Melaka": "#f2a71b", "Negeri Sembilan": "#5b6472", "Johor": "#2f8f5b" };
+  const datasets = result.workshops.map(w => ({
+    label: w,
+    data: result.revenueSeries[w],
+    backgroundColor: palette[w] || "#98a1ad"
+  }));
+
+  if (currentAnalyticsChart) currentAnalyticsChart.destroy();
+  currentAnalyticsChart = new Chart(canvas.getContext("2d"), {
+    type: "bar",
+    data: { labels: result.months, datasets },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: "#eef0f2" } }, title: { display: true, text: "Monthly revenue by workshop (RM)", color: "#eef0f2" } },
+      scales: {
+        x: { ticks: { color: "#98a1ad" }, grid: { color: "#2a323c" } },
+        y: { ticks: { color: "#98a1ad" }, grid: { color: "#2a323c" } }
+      }
+    }
+  });
+}
+
+/* -------------------------------------------------------------------------
+   FEATURE 11 — Webmaster: accounts + audit log
+------------------------------------------------------------------------- */
+async function loadAccounts() {
+  const session = getSession();
+  const tbody = document.getElementById("accountsBody");
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="6">Loading...</td></tr>`;
+  const result = await apiCall("getAccounts", { token: session.token });
+  if (!result.success) { tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${result.message || "Could not load accounts."}</td></tr>`; return; }
+  const rows = result.accounts || [];
+  tbody.innerHTML = rows.map(a => `
+    <tr><td>${a.username}</td><td>${a.role}</td><td>${a.workshop}</td><td>${a.fullName}</td>
+      <td><span class="tag ${a.status === 'Active' ? 'active' : 'inactive'}">${a.status}</span></td>
+      <td>
+        <button class="btn btn-ghost btn-small" data-act="toggle" data-user="${a.username}">${a.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
+        <button class="btn btn-ghost btn-small" data-act="reset" data-user="${a.username}">Reset Password</button>
+      </td></tr>`).join("");
+
+  tbody.querySelectorAll("button[data-act]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const username = btn.dataset.user;
+      if (btn.dataset.act === "toggle") {
+        const row = rows.find(r => r.username === username);
+        const newStatus = row.status === "Active" ? "Inactive" : "Active";
+        await apiCall("updateAccount", { token: session.token, username, updates: { status: newStatus } });
+        loadAccounts();
+      } else {
+        const newPass = prompt("Enter a new temporary password for " + username + ":");
+        if (newPass) { await apiCall("updateAccount", { token: session.token, username, updates: { password: newPass } }); alert("Password reset."); }
+      }
     });
+  });
 }
 
-// Fungsi untuk mengambil data dari Google Sheets API
-async function fetchAssetData(sheetsUrl, systemId) {
-    try {
-        const response = await fetch(sheetsUrl);
-        const data = await response.json();
-        const filteredData = data.filter(item => (item['Type of System'] || '').trim().toUpperCase() === (systemId || '').trim().toUpperCase());
-        return filteredData;
-    } catch (error) {
-        console.error('Error fetching data from Google Apps Script:', error);
-        return [];
+document.getElementById("addStaffForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const session = getSession();
+  const msg = document.getElementById("addStaffMsg");
+  const member = {
+    username: document.getElementById("asUsername").value.trim(),
+    password: document.getElementById("asPassword").value,
+    fullName: document.getElementById("asName").value.trim(),
+    role: document.getElementById("asRole").value,
+    workshop: document.getElementById("asWorkshop").value
+  };
+  const result = await apiCall("addMember", { token: session.token, member });
+  if (result.success) { showMsg(msg, "Staff account created.", true); e.target.reset(); loadAccounts(); }
+  else showMsg(msg, result.message || "Could not create account.", false);
+});
+
+async function loadAuditLog() {
+  const session = getSession();
+  const tbody = document.getElementById("auditLogBody");
+  tbody.innerHTML = `<tr class="empty-row"><td colspan="5">Loading...</td></tr>`;
+  const result = await apiCall("getAuditLog", { token: session.token });
+  if (!result.success) { tbody.innerHTML = `<tr class="empty-row"><td colspan="5">${result.message || "Could not load audit log."}</td></tr>`; return; }
+  const rows = result.log || [];
+  tbody.innerHTML = rows.length ? rows.map(r => `<tr><td>${r.timestamp}</td><td>${r.username}</td><td>${r.role}</td><td>${r.action}</td><td>${r.details}</td></tr>`).join("")
+    : `<tr class="empty-row"><td colspan="5">No activity recorded yet.</td></tr>`;
+}
+document.getElementById("auditLogRefresh").addEventListener("click", loadAuditLog);
+
+/* -------------------------------------------------------------------------
+   FEATURE 8 — Review submission (triggered via ?review=TOKEN in the URL)
+------------------------------------------------------------------------- */
+let selectedRating = 0;
+function initReviewFlow() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("review");
+  if (!token) return;
+
+  apiCall("getReviewContext", { reviewToken: token }).then(result => {
+    const modal = document.getElementById("reviewModal");
+    modal.classList.remove("hidden");
+    if (!result.success) {
+      document.getElementById("reviewBody").innerHTML = `<p>${result.message}</p>`;
+      return;
     }
+    document.getElementById("reviewWorkshopName").textContent = result.workshop;
+    document.getElementById("reviewForm").dataset.token = token;
+  });
 }
 
-// Logik untuk halaman hospital
-async function setupHospitalPage() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const hospitalId = urlParams.get('hosp');
-    const systemId = urlParams.get('sys');
+document.querySelectorAll(".star-btn").forEach(star => {
+  star.addEventListener("click", () => {
+    selectedRating = Number(star.dataset.value);
+    document.querySelectorAll(".star-btn").forEach(s => s.classList.toggle("selected", Number(s.dataset.value) <= selectedRating));
+  });
+});
+document.getElementById("reviewForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("reviewMsg");
+  const token = e.target.dataset.token;
+  const comment = document.getElementById("reviewComment").value.trim();
+  const result = await apiCall("submitReview", { reviewToken: token, rating: selectedRating, comment });
+  if (result.success) {
+    document.getElementById("reviewBody").innerHTML = `<p>Thank you for your feedback!</p>`;
+    showMsg(msg, "", true); msg.className = "form-msg";
+  } else {
+    showMsg(msg, result.message || "Could not submit review.", false);
+  }
+});
+document.getElementById("reviewClose").addEventListener("click", () => {
+  document.getElementById("reviewModal").classList.add("hidden");
+  const url = new URL(window.location);
+  url.searchParams.delete("review");
+  window.history.replaceState({}, "", url);
+});
 
-    const mainContent = document.querySelector('main');
-    const headerTitle = document.getElementById('header-title');
-    const backButton = document.getElementById('back-button');
-
-    const currentHospital = hospitalData.find(hosp => hosp.id === hospitalId);
-    const sheetsUrl = currentHospital ? currentHospital.sheetsUrl : null;
-
-    // --- Logik untuk halaman senarai sistem kritikal ---
-    if (!systemId) {
-        if (backButton) {
-            backButton.style.display = 'none';
-        }
-        headerTitle.textContent = `Type of Critical System - ${currentHospital ? currentHospital.name : hospitalId}`;
-        // Jangan hapuskan kandungan utama HTML hospital-page.html jika ia mengandungi struktur menu, 
-        // tetapi kita akan ganti dengan grid yang dijana JS jika dataSheets ada.
-
-        if (!sheetsUrl || sheetsUrl === '') {
-            mainContent.innerHTML = `<p style="text-align:center; color:red; font-weight:bold;">No data from Google Spreadsheet for this hospital. Please contact (011-31234648).</p>`;
-            return;
-        }
-
-        mainContent.innerHTML = '<div class="loading-spinner"></div><p style="text-align:center; margin-top:10px;">Please wait while the system load the data...</p>';
-
-        try {
-            const response = await fetch(sheetsUrl);
-            const allData = await response.json();
-
-            // Sediakan tajuk
-            mainContent.innerHTML = `<h2 class="main-title"></h2>`;
-            const cardGrid = document.createElement('div');
-            cardGrid.className = 'system-grid'; 
-
-            // --- PETA LALUAN GAMBAR (MAP) ---
-            const systemImageMap = {
-                "Generator Set": "Gambar-System/genset.webp", 
-                "Electrical Supply": "Gambar-System/ElectricalSupply.webp",
-                "Water Supply System": "Gambar-System/WSS.webp",
-                "Autoclave": "Gambar-System/autoclave.webp",
-                "Medical Gas Pipeline System": "Gambar-System/MGPS.webp",
-                "Lift": "Gambar-System/lift.webp",
-                "Air Handling Unit": "Gambar-System/AHU.webp",
-                "BAS System": "Gambar-System/BAS.webp",
-                "Chiller And Cooling Tower": "Gambar-System/CHILLER.webp", 
-                "Fire Protection System": "Gambar-System/FPS.webp", 
-            };
-
-
-            criticalSystems.forEach(system => {
-                const card = document.createElement('a');
-                card.className = 'system-card'; 
-                card.href = `hospital-page.html?hosp=${hospitalId}&sys=${system.id}`;
-
-                // --- START: TAMBAH OVERLAY ---
-                const overlay = document.createElement('div');
-                overlay.className = 'card-overlay';
-                card.appendChild(overlay);
-                // --- END: TAMBAH OVERLAY ---
-
-                // KOD GAMBAR
-                const img = document.createElement('img');
-                const imageSrc = systemImageMap[system.id] || "Gambar/default.webp"; 
-                img.src = imageSrc;
-                img.alt = system.name;
-                img.className = 'card-image';
-                card.appendChild(img);
-
-                // 3. TAMBAH TAJUK (z-index: 2)
-                const systemName = document.createElement('span');
-                systemName.className = 'card-title';
-                systemName.textContent = system.name;
-                card.appendChild(systemName);
-                
-                // Kira status untuk sistem ini dari data yang telah diambil
-                const systemData = allData.filter(item => (item['Type of System'] || '').trim().toUpperCase() === (system.id || '').trim().toUpperCase());
-                const functioningCount = systemData.filter(item => (item.Status || '').trim().toUpperCase() === 'FUNCTIONING').length;
-                const notFunctioningCount = systemData.filter(item => (item.Status || '').trim().toUpperCase() === 'NOT FUNCTIONING').length;
-
-                // Tambah status ke kad
-                const statusContainer = document.createElement('div');
-                statusContainer.className = 'status-container'; 
-
-                const spanF = document.createElement('span');
-                spanF.className = 'status-box status-FUNCTIONING';
-                spanF.textContent = `FUNCTIONING: ${functioningCount}`;
-
-                const spanNF = document.createElement('span');
-                spanNF.className = 'status-box status-NOT-FUNCTIONING';
-                spanNF.textContent = `NOT FUNCTIONING: ${notFunctioningCount}`;
-
-                statusContainer.appendChild(spanF);
-                statusContainer.appendChild(spanNF);
-                
-                card.appendChild(statusContainer);
-                
-                cardGrid.appendChild(card);
-            });
-            mainContent.appendChild(cardGrid);
-
-        } catch (error) {
-            console.error("Fetch error:", error);
-            mainContent.innerHTML = `<p style="text-align:center; color:red; font-weight:bold;">Failed to retrieve data. Please check the URL or contact 011-31234648.</p>`;
-        }
-    }
-    // --- Logik untuk halaman butiran aset ---
-    else {
-        // Pautan butang "Back"
-        if (backButton) {
-            backButton.style.display = 'inline-block';
-            backButton.href = `hospital-page.html?hosp=${hospitalId}`;
-        }
-
-        const currentSystem = criticalSystems.find(system => system.id === systemId);
-        if (currentSystem) {
-            headerTitle.textContent = `${currentSystem.name} - ${currentHospital.name}`;
-        } else {
-            headerTitle.textContent = systemId;
-        }
-
-        if (!sheetsUrl || sheetsUrl === '') {
-            mainContent.innerHTML = `<p style="text-align:center; color:red; font-weight:bold;">No data from Google Spreadsheet for this hospital.</p>`;
-            return;
-        }
-
-        mainContent.innerHTML = '<div class="loading-spinner"></div><p style="text-align:center; margin-top:10px;">Please be patient, data is being loaded</p>';
-
-        const data = await fetchAssetData(sheetsUrl, systemId);
-        mainContent.innerHTML = '';
-
-        const formKey = `${hospitalId}_${systemId}`;
-        const formUrl = submissionForms[formKey];
-
-        const formButton = document.createElement('a');
-        formButton.className = 'form-button';
-        formButton.textContent = 'Go to Submission Form';
-        formButton.href = formUrl ? formUrl : '#';
-        formButton.target = '_blank';
-        if (!formUrl) {
-            formButton.style.opacity = '0.5';
-            formButton.style.cursor = 'not-allowed';
-            formButton.textContent = 'Form Not Available';
-        }
-        mainContent.appendChild(formButton);
-
-        const locations = {};
-        data.forEach(item => {
-            const location = item['Location'];
-            if (!locations[location]) {
-                locations[location] = [];
-            }
-            locations[location].push(item);
-        });
-
-        if (Object.keys(locations).length === 0) {
-            mainContent.innerHTML += `<p style="text-align:center; color:red; font-weight:bold;">No data found for this system! 😲😤.</p>`;
-            return;
-        }
-
-        for (const location in locations) {
-            const locationSection = document.createElement('section');
-            locationSection.className = 'location-section';
-
-            const locationTitle = document.createElement('h2');
-            locationTitle.textContent = location;
-            locationSection.appendChild(locationTitle);
-
-            const cardGrid = document.createElement('div');
-            cardGrid.className = 'card-grid';
-
-            locations[location].forEach(item => {
-                let statusClass = '';
-                const itemStatus = item['Status'] ? item['Status'].trim().toUpperCase() : '';
-
-                if (itemStatus === 'FUNCTIONING') {
-                    statusClass = 'status-FUNCTIONING';
-                } else if (itemStatus === 'NOT FUNCTIONING') {
-                    statusClass = 'status-NOT-FUNCTIONING';
-                }
-
-                const rawDate = item['Last Update'];
-                let formattedDate = '';
-                if (rawDate) {
-                    try {
-                        const dateObj = new Date(rawDate);
-                        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                        const day = String(dateObj.getDate());
-                        const month = monthNames[dateObj.getMonth()];
-                        const year = String(dateObj.getFullYear()).slice(-2);
-                        let hours = dateObj.getHours();
-                        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                        const seconds = String(dateObj.getSeconds()).padStart(2, '0');
-                        const ampm = hours >= 12 ? 'PM' : 'AM';
-                        hours = hours % 12;
-                        hours = hours ? hours : 12;
-
-                        formattedDate = `${day} ${month} ${year}, ${hours}:${minutes}:${seconds} ${ampm}`;
-                    } catch (e) {
-                        console.error('Failed to parse date:', rawDate);
-                        formattedDate = rawDate;
-                    }
-                } else {
-                    formattedDate = 'N/A';
-                }
-
-                const card = document.createElement('div');
-                card.className = 'asset-card';
-                card.innerHTML = `
-                    <h3>${item['Asset']}</h3>
-                    <p><strong>Status:</strong> <span class="status-box ${statusClass}">${item['Status']}</span></p>
-                    <p><strong>Remark:</strong> ${item['Remark']}</p>
-                    <p><strong>Action:</strong> ${item['Action']}</p>
-                    <p class="last-update">Last Update: ${formattedDate}</p>
-                `;
-                cardGrid.appendChild(card);
-            });
-
-            locationSection.appendChild(cardGrid);
-            mainContent.appendChild(locationSection);
-        }
-    }
-}
-
-// Panggil fungsi yang betul berdasarkan halaman
-if (window.location.pathname.endsWith('hospital-page.html')) {
-    document.addEventListener('DOMContentLoaded', setupHospitalPage);
-} else if (window.location.pathname === '/' || window.location.pathname.endsWith('Critical-System.html')) {
-    document.addEventListener('DOMContentLoaded', updateHospitalCards);
-}
+/* -------------------------------------------------------------------------
+   Restore session on page load
+------------------------------------------------------------------------- */
+(async function init() {
+  initReviewFlow();
+  const session = getSession();
+  if (!session) return;
+  const result = await apiCall("validateSession", { token: session.token });
+  if (result.success) enterDashboard(session); else clearSession();
+})();
