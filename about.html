@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us | FEMS Critical System</title>
+    <link rel="stylesheet" href="styles.css"> 
+    <style>
+        .main-header {
+            display: flex;/* Ini memastikan elemen di dalamnya dijajar secara mendatar */
+            justify-content: space-between;  /* Ini menolak logo kiri ke kiri, dan logo kanan ke kanan */
+            align-items: center;/* Ini menjajar item ke tengah secara menegak */
+            /* 🔴 PENYELESAIAN Jarak: Tambah padding yang sama di kiri dan kanan */
+            padding-left: 12px; 
+            padding-right: 10px;
+            /* Anda juga boleh gunakan shorthand: padding: 10px 30px; */
+            max-width: 1400px;/* Pilihan: Untuk mengelakkan header menjadi terlalu lebar pada monitor besar */
+            margin: 0 auto; /* Tengahkannya pada skrin yang sangat besar */
+        }
+
+        /* GAYA BARU UNTUK KONTEKS CARTA ORGANISASI */
+        .org-simple-container {
+            /* 🔴 GANTIKAN DENGAN KOD WARNA PILIHAN ANDA */
+            background-color: #ffffff00; /* Contoh: Warna kelabu yang sangat muda */
+            /* ATAU WARNA LURUTSINAR */
+            /* background-color: transparent; */ 
+            /* PENTING: Tambah padding supaya kandungan tidak terlalu rapat ke tepi */
+            padding: 20px; 
+            /* PENTING: Tambah margin-top/bottom untuk pemisahan */
+            margin-top: 20px;
+            margin-bottom: 40px;
+            /* Pilihan: Untuk nampak kemas */
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0);
+        }
+
+        /* Gaya untuk Dropdown Container (Butang About Us itu sendiri) */
+        .about-dropbtn {
+            background-color: #b2b2b237; /* PASTIKAN KOD WARNA INI ADA */
+            color: rgb(0, 0, 0);
+            padding: 10px 15px;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            border-radius: 20px;
+            position: relative;
+        }
+        /* Gaya untuk Dropdown Menu */
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            /* PENTING: Tetapkan left: 0 untuk bermula dari tepi kiri butang */
+            left: auto; 
+            /* Buang sebarang penetapan 'right' jika ada */
+            background-color: #f9f9f9c7;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 500; 
+            border-radius: 20px;
+        }
+        /* GAYA KRITIKAL YANG HILANG */
+        .dropdown-content.show {
+            /* BARIS INI WAJIB ADA: Paksa ia muncul */
+            display: block !important; 
+        }
+        .dropdown-wrapper {
+            position: relative; /* PENTING: Menu dropdown akan berbaris mengikut kontena ini */
+            display: inline-block;
+        }
+
+        /* ==========================================================
+           GAYA CARTA ORGANISASI (Organization Chart)
+           Ini adalah gaya yang telah diperbaiki untuk garisan dan susunan.
+           ========================================================== */
+        /* Gaya Kotak Pekerja (Simple Node) */
+        .node-simple {
+            background-color: none;
+            border: 1px solid #00000000; /*border HOD,OM,Exec*/
+            border-radius: 5px;
+            padding: 10px 15px;
+            min-width: 120px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            font-size: 0.9em;
+            text-align: center;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+        .node-simple:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .node-simple .name {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+        .node-simple .title {
+            color: #333;
+            font-size: 0.9em;
+        }
+        .org-simple-container::before , .level.level-2.main-branch::before,.level.level-2-1-om::before {
+        display: none;
+        }
+        /* UNTUK HOD: KEDUA-DUA KELAS INI MESTI ADA */
+        .node-simple.root-node {
+            min-width: 180px; 
+            max-width: 200px; 
+            margin: 0 auto 10px auto; 
+        }
+        
+        /* ==========================================================
+           GAYA GAMBAR (FRAME DIBUANG)
+           ========================================================== */
+        
+        .profile-img {
+            width: 50%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            margin: 0 auto 5px auto; /* BARIS INI yang menjadikannya di tengah (auto margin kiri dan kanan) */
+        }
+
+        /* ==========================================================
+           GAYA UNTUK STRUKTUR CABANG (Flexbox)
+           ========================================================== */
+
+        .main-branch {
+            display: flex;
+            justify-content: space-around; 
+            align-items: flex-start;
+            gap: 30px; 
+            margin: 20px 0;
+            padding: 0;
+            border-bottom: none !important;
+        }
+
+        .sub-branch {
+            flex-basis: 48%; 
+            display: flex;
+            flex-direction: column; /* Susun ke bawah */
+            align-items: center;
+            border: 0px solid #3b3b3b00; /*border besar*/
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #00000000;
+            min-height: 300px;
+        }
+
+        .level-2-1-om {
+            display: flex;
+            /* Susun Title dan Kotak Profil secara menegak */
+            flex-direction: column; 
+            /* Pusatkan kandungan ke tengah (horizontal) */
+            align-items: center; 
+            gap: 10px; 
+            width: 100%; /* Penting: Pastikan ia mengambil lebar penuh dalam parent */
+        }
+        
+        /* Sub-Cabang O&M: Susun Region dan Resource side-by-side */
+        .level-3-om {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+            margin-top: 10px;
+            padding: 0;
+            border-bottom: none;
+        }
+        .level-3-om::before { content: none; }
+
+        .role-group {
+            display: flex;
+            flex-wrap: wrap; 
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 10px;
+            width: 48%; 
+            border-top: 1px dashed #00000062;
+        }
+
+        .group-title {
+            width: 100%;
+            font-weight: bold;
+            color: #434343;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .role-group .node-simple {
+            min-width: 120px;
+            max-width: 150px;
+            padding: 5px 8px;
+            font-size: 0.8em;
+            border-color: #00000000; /*border each O&M*/
+        }
+        
+        /* ==========================================================
+           GAYA UNTUK SUSUNAN MENEGAK (Management FEMS)
+           ========================================================== */
+        .level-2-1-mgmt {
+            flex-direction: column; /* Susun menegak */
+            align-items: center; 
+            gap: 10px; 
+            padding: 10px;
+            width: 100%;
+        }
+        .level-2-1-mgmt::before { content: none; }
+        .level-2-1-mgmt .node-simple {
+            min-width: 120px; 
+            max-width: 150px;
+            margin: 0 auto;
+        }
+        
+
+        /* ==========================================================
+        GAYA SLIDESHOW BARU (3 GAMBAR PER FRAME)
+        ========================================================== */
+        .slideshow-container {
+        max-width: 900px; 
+        position: relative;
+        margin: auto;
+        overflow: hidden; 
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0);
+        }
+
+        .mySlides {
+        display: block; 
+        padding: 10px; 
+        }
+
+        /* KUMPULAN BARU: Susun 10 gambar dalam satu baris, dan membenarkan anjakan */
+        .gallery-slide-group {
+            display: flex;
+            gap: 10px; 
+            /* Gunakan transition untuk kesan gelongsor yang lancar */
+            transition: transform 0.9s ease-in-out; 
+        }
+
+        /* ITEM BARU: Untuk menguruskan setiap gambar */
+        .slide-item {
+            /* (900px - 30px gap) / 4 = 217.5px. Kita gunakan calc */
+            flex: 0 0 calc((100% - 30px) / 4); /* Tetapkan item untuk ambil 1/4 ruang kontena */
+            cursor: pointer;
+            min-width: 0; 
+        }
+
+        /* --- KOTAK ASPECT RATIO (Nisbah Gambar) --- */
+        .aspect-ratio-box {
+            position: relative;
+            width: 100%;
+            padding-top: 75%; /* Nisbah 4:3 (75% of width) */
+            overflow: hidden;
+            border-radius: 5px; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0); 
+            background-color: #00000000;
+        }
+
+        /* Gambar sebenar kini mengisi kotak */
+        .aspect-ratio-box img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%; 
+            object-fit: contain; /* Memastikan gambar penuh kelihatan, tidak terpotong */
+            display: block;
+            border-radius: 5px; 
+        }
+
+        /* Butang Kiri/Kanan */
+        .prev, .next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            width: auto;
+            padding: 16px;
+            margin-top: -22px;
+            color: rgb(185, 185, 185);
+            font-weight: bold;
+            font-size: 18px;
+            transition: 0.6s ease;
+            border-radius: 0 3px 3px 0;
+            user-select: none;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .next {
+        right: 0;
+        border-radius: 3px 0 0 3px;
+        }
+        .prev:hover, .next:hover {
+            background-color: rgba(0,0,0,0.8);
+        }
+        .fade {
+            animation-name: fade;
+            animation-duration: 1.5s;
+        }
+        @keyframes fade {
+            from {opacity: .4} 
+            to {opacity: 1}
+        }
+
+        
+
+        /* ==========================================================
+        GAYA UNTUK SUSUNAN MEDIA (VIDEO & SLIDESHOW)
+        ========================================================== */
+        .media-section-flex {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start; /* Jajar ke atas */
+            margin-top: 20px;
+        }
+
+        .media-item {
+            flex: 1; /* Berikan ruang yang sama */
+            min-width: 0;
+        }
+
+        /* Tetapkan lebar untuk Video dan Slideshow (Contoh: 40% Video, 60% Slideshow) */
+        .video-col {
+            flex: 0 0 40%; 
+            max-width: 40%;
+        }
+
+        .slideshow-col {
+            flex: 0 0 60%; 
+            max-width: 60%;
+            padding: 10px 0; /* Tambah padding atas/bawah jika perlu */
+        }
+
+        .video-container {
+            /* Gaya lama anda untuk video container (jika ada) */
+            width: 100%;
+            height: auto;
+            background-color: #00000000;
+        }
+        .video-container video {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 5px;
+        }
+
+
+        /* Media Queries untuk reka bentuk responsif (kekal sama) */
+        @media screen and (max-width: 900px) {
+
+            .media-section-flex {
+                flex-direction: row;
+            }*/
+            .video-col, .slideshow-col {
+                flex: 1; /* Ambil semua ruang lebar */
+                max-width: 100%;
+            }
+            .main-branch {
+                flex-direction: column;
+                gap: 15px;
+                align-items: stretch;
+            }
+            .sub-branch {
+                min-height: auto;
+                padding: 10px;
+                flex-basis: 100%;
+                width: 100%;
+            }
+            .level-3-om {
+                flex-direction: column; 
+                gap: 15px;
+            }
+            .role-group {
+                width: 100%; 
+            }
+            /* Tambah ini jika warna hilang: */
+            .about-dropbtn {
+                position: relative; /* ULANGI INI PADA SKRIN KECIL */
+                /*background-color: #008cba;*/
+            }
+            /* 2. Susun Media (Kekal) */
+            .media-section-flex {
+                flex-direction: column; /* Ini perlu dibetulkan kepada 'column', bukan 'row' seperti dalam kod anda yang lama */
+            }
+            .video-col, .slideshow-col {
+                flex: 1; 
+                max-width: 100%;
+            }
+        }
+        /* Gaya responsif untuk 3 gambar - menukar kepada 1 gambar per slide pada skrin kecil */
+        @media screen and (max-width: 768px) {
+            /* Jadikan setiap gambar mengambil lebar penuh pada mobile */
+            .slide-item {
+                flex: 0 0 100%;
+                max-width: 100%;
+            }
+
+            .gallery-slide-group {
+                flex-direction: column;
+                gap: 20px; 
+            }
+            
+             /* === 1. MENYUSUN SEMULA HEADER UTAMA === */
+            .main-header {
+                /* Tukar susun atur Flexbox dari baris kepada lajur untuk memaksimumkan ruang menegak */
+                flex-direction: column; 
+                /* Pastikan header guna lebar penuh */
+                width: 100%; 
+                /* Reset padding sisi yang mungkin menghimpit di desktop */
+                padding-left: 10px;
+                padding-right: 10px;
+                /* Tambah padding atas/bawah untuk ruang bernafas */
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+            /* === 2. MENYESUAIKAN WRAPPER JAM & MENU === */
+            .title-and-menu-wrapper {
+                /* Berikan lebar penuh untuk membenarkan elemen berpusat di bawah logo */
+                width: 100%; 
+                /* Menggunakan Flexbox untuk menjajarkan jam dan menu */
+                display: flex;
+                /* Pusatkan jam dan menu di tengah skrin */
+                justify-content: center; 
+                align-items: center;
+                margin-top: 5px; /* Tolak ke bawah sedikit dari logo/tajuk utama */
+            }
+
+            /* === 3. MERAPATKAN JAM & BUTANG 'ABOUT US' === */
+            /* Jam (Time Widget) */
+            #time-widget {
+                /* Gunakan saiz font yang sedikit lebih kecil jika perlu */
+                font-size: 0.8em; 
+                /* Pastikan ia dijajarkan dengan About Us */
+                white-space: nowrap; 
+                /* Tambah ruang kecil antara jam dan menu */
+                margin-right: 5px; 
+            }
+            
+            /* Dropdown menu 'About Us' */
+            .about-dropbtn {
+                /* Hilangkan margin/padding yang berlebihan */
+                padding: 6px 10px; 
+                font-size: 0.9em;
+            }
+            
+            /* === 4. MEMPERBAIKI BUTANG "KEMBALI KE LAMAN UTAMA" === */
+            /* Butang ini berada di luar header, kita perlu berikannya ruang yang cukup */
+            .back-button { /* Asumsi ini adalah kelas CSS untuk butang tersebut */
+                /* Pastikan ia bermula di baris baru */
+                display: block; 
+                /* Tambah margin untuk mengasingkannya dari header di atas */
+                margin-top: 15px; 
+                /* Berikan padding yang mencukupi untuk mengelakkan terpotong di tepi */
+                padding-left: 10px; 
+            }
+            
+            /* Anda mungkin perlu reset lebar imej logo jika ia terlalu besar di mobile */
+            .header-left img { 
+                max-width: 150px; 
+            }
+        
+        }
+
+        /* ==========================================================
+        GAYA MODAL/LIGHTBOX BARU
+        ========================================================== */
+
+        /* Kontena Modal Penuh Skrin (Secara lalai tersembunyi) */
+        .modal {
+            display: none; /* Sembunyikan secara lalai */
+            position: fixed; /* Kekal di tempat yang sama walaupun scroll */
+            z-index: 10000; /* Pastikan ia berada di atas semua elemen lain */
+            padding-top: 50px; /* Jarak dari atas */
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; /* Membolehkan scroll jika gambar besar */
+            background-color: rgba(0, 0, 0, 0.344); /* Latar belakang hitam lutsinar */
+        }
+
+        /* Gambar di dalam Modal */
+        .modal-content {
+            margin: auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            animation-name: zoom;
+            animation-duration: 0.6s;
+        }
+
+        /* Butang Tutup (X) */
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #ffffff;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .close-btn:hover,
+        .close-btn:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Animasi untuk Modal */
+        @keyframes zoom {
+            from {transform:scale(0)} 
+            to {transform:scale(1)}
+        }
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        
+        <div class="header-left">
+            <img src="medivest.webp" alt="Logo Syarikat" class="header-logo" width="200" height="80">
+        </div>
+        
+        <div class="title-and-menu-wrapper">
+            <h1>Facilities Engineering Management Services (FEMS) - About Us</h1>
+            
+            <div class="title-menu-bar"> 
+                <div id="time-widget" class="text-xss font-bold text-center text-gray-700 mt-4 mb-4" style="font-size: 15px !important;">
+                    Loading Time...
+                </div>
+                <div class="dropdown-wrapper"> 
+                    <a href="#" class="about-dropbtn" onclick="toggleDropdown(event)">
+                        About Us ▾
+                    </a> 
+                    <div id="aboutDropdown" class="dropdown-content">
+                        <a href="about.html?section=chart" class="dropdown-item">Organization Chart</a>
+                        <a href="about.html?section=who" class="dropdown-item">Who We Are</a>
+                        <a href="about.html?section=vision" class="dropdown-item">Vision & Mission</a>
+                        <a href="about.html?section=media" class="dropdown-item">Media & Event</a>
+                    </div>
+                </div>    
+            </div>
+        </div>
+        
+        <div class="header-right"> 
+            <img src="anything is possible.webp" alt="Slogan Medivest" class="header-logo2" width="200" height="80">
+        </div>
+        
+    </header>
+
+    <main class="container">
+        <div class="about-content">
+            <a href="Critical-System.html" class="back-button">← Kembali ke Laman Utama</a>
+            <div id="content-display">
+            </div>
+        </div>
+    </main>
+    </main>
+
+    <div id="myModal" class="modal">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="img01">
+    </div>
+
+    <script>
+        // ==========================================================
+        // FUNGSI UTAMA: TOGGLE DROPDOWN
+        // ==========================================================
+        function toggleDropdown(event) {
+            // Mencegah navigasi link #
+            if (event) {
+                event.preventDefault(); 
+            }
+            // Pastikan ID 'aboutDropdown' adalah tepat
+            const dropdown = document.getElementById("aboutDropdown");
+            if (dropdown) {
+                dropdown.classList.toggle("show");
+            }
+        }
+        
+        // ==========================================================
+        // FUNGSI WIDGET MASA 
+        // ==========================================================
+        function updateTimeWidget() {
+            const now = new Date();
+            const timeOptions = { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true };
+            const formattedTime = now.toLocaleTimeString('en-US', timeOptions);
+
+            const dateOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            const formattedDate = now.toLocaleDateString('en-US', dateOptions);
+
+            const timeWidget = document.getElementById('time-widget');
+            if (timeWidget) {
+                timeWidget.innerHTML = `${formattedDate} | ${formattedTime}`;
+            }
+        }
+        updateTimeWidget(); // Panggil sekali untuk mulakan jam
+        setInterval(updateTimeWidget, 1000); // Setkan interval
+
+        // ==========================================================
+        // FUNGSI SLIDESHOW (Carousel)
+        // ==========================================================
+        let slideIndex = 0; 
+        const ITEMS_PER_VIEW = 4;
+        const TOTAL_ITEMS = 7;
+        const MAX_SLIDE_INDEX = TOTAL_ITEMS - ITEMS_PER_VIEW; 
+
+        function plusSlides(n) {
+            slideIndex += n;
+            showSlides();
+        }
+
+        function showSlides() {
+            const track = document.getElementById('carousel-track');
+            if (!track) return;
+
+            if (slideIndex > MAX_SLIDE_INDEX) {
+                slideIndex = 0; 
+            }
+            if (slideIndex < 0) {
+                slideIndex = MAX_SLIDE_INDEX; 
+            }
+            
+            let itemWidthPercent = 100 / ITEMS_PER_VIEW; 
+            let translateValue = slideIndex * itemWidthPercent;
+            
+            const galleryGroup = track.querySelector('.gallery-slide-group');
+            if(galleryGroup) {
+                galleryGroup.style.transform = `translateX(-${translateValue}%)`;
+            }
+        }
+        
+        // ==========================================================
+        // FUNGSI MODAL (Buka & Tutup)
+        // ==========================================================
+        function openModal(element) {
+            var modal = document.getElementById("myModal");
+            var modalImg = document.getElementById("img01");
+
+            if (modal && modalImg) { 
+                modal.style.display = "block";
+                modalImg.src = element.src; 
+            }
+        }
+        
+        function closeModal() {
+            var modal = document.getElementById("myModal");
+            if (modal) {
+                modal.style.display = "none";
+            }
+        }
+        
+        // ==========================================================
+        // FUNGSI PAPAR KANDUNGAN (Routing / Deep Link)
+        // ==========================================================
+         function displayContent() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const section = urlParams.get('section');
+            const displayDiv = document.getElementById('content-display');
+
+            let htmlContent = '';
+            if (section === 'chart') {
+                // KOD CARTA ORGANISASI YANG DIKEMAS KINI
+                htmlContent = `
+                    <h2>Organization Chart: FEMS Headquarters</h2>
+                    <div class="org-simple-container">
+
+                        <div class="level level-1">
+                            <div class="node-simple root-node">
+                                <div class="profile-img-container">
+                                    <img src="images/HOD 2.webp" alt="HOD Profile" class="profile-img">
+                                </div>
+                                <div class="name">Muhammad Hafizi B Zainal Abidin</div>
+                                <div class="title">Head Of Deparment FEMS</div>
+                            </div>
+                        </div>
+                        
+                        <div class="level level-2 main-branch">
+                            
+                            <div class="sub-branch operation-maintenance">
+                                <div class="level level-2-1-om">
+                                    <div class="group-title">OPERATION FEMS</div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container">
+                                            <img src="images/Hanif.webp" alt="Operation Manager Profile" class="profile-img">
+                                        </div>
+                                        <div class="name">Muhammad Hanif B. Atan</div>
+                                        <div class="title">Assistant Manager - Operation</div>
+                                    </div>
+                                </div>
+
+                                <div class="level level-3-om sub-om-roles">
+                                    
+                                    <div class="role-group region-group">
+                                        <div class="group-title">FEMS Region</div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/zariman.webp" alt="Region 1" class="profile-img"></div>
+                                            <div class="name">Mohd Hanis Zariman B. Ismail</div>
+                                            <div class="title">FR (ROSJ)</div>
+                                        </div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/Shaiful.webp" alt="Region 3" class="profile-img"></div>
+                                            <div class="name">Shaiful B. Mat Isa</div>
+                                            <div class="title">FR (ROMNJ)</div>
+                                        </div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/Male.webp" alt="Region 3" class="profile-img"></div>
+                                            <div class="name">Ariff Iskandar B. Iskandar</div>
+                                            <div class="title">Senior Executive</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="role-group resource-group">
+                                        <div class="group-title">Resource Person</div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/Ir.Ayie.webp" alt="Resource 1" class="profile-img"></div>
+                                            <div class="name">Ir. Azari B Bakeri</div>
+                                            <div class="title">RP Electrical</div>
+                                        </div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/female.webp" alt="Resource 2" class="profile-img"></div>
+                                            <div class="name">Ameera Ratia Bt Ab Rahman</div>
+                                            <div class="title">RP Civil & Structural Engineer</div>
+                                        </div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/Male.webp" alt="Resource 2" class="profile-img"></div>
+                                            <div class="name">Safri B. Maarop</div>
+                                            <div class="title">RP HVAC</div>
+                                        </div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/Male.webp" alt="Resource 2" class="profile-img"></div>
+                                            <div class="name">Adnan B. Ishak</div>
+                                            <div class="title">RP Mechanical</div>
+                                        </div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/Male.webp" alt="Resource 2" class="profile-img"></div>
+                                            <div class="name">Khairul Akram B. Azam Abdullah</div>
+                                            <div class="title">RP PCB Specialist</div>
+                                        </div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/female.webp" alt="Resource 2" class="profile-img"></div>
+                                            <div class="name">Tuan Farah Najwa Bt. Tuan Mohd Noor</div>
+                                            <div class="title">RP Entomologist</div>
+                                        </div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/female.webp" alt="Resource 2" class="profile-img"></div>
+                                            <div class="name">Mazlina Bt. Hussein</div>
+                                            <div class="title">Senior Drafter</div>
+                                        </div>
+                                        <div class="node-simple">
+                                            <div class="profile-img-container"><img src="images/fatin.webp" alt="Resource 2" class="profile-img"></div>
+                                            <div class="name">Fatin Azwa Bt Ghazali</div>
+                                            <div class="title">Arborist</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="sub-branch management-fems">
+                                <div class="level level-2-1-mgmt"> 
+                                    <div class="group-title">MANAGEMENTS FEMS</div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container"><img src="images/Male.webp" alt="Executive 1" class="profile-img"></div>
+                                        <div class="name">Muhammad Aisar B. Yusoff</div>
+                                        <div class="title">Senior AME (RONS)</div>
+                                    </div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container"><img src="images/female.webp" alt="Executive 2" class="profile-img"></div>
+                                        <div class="name">Khairunisa Bt. Harun</div>
+                                        <div class="title">AME (ROMNJ)</div>
+                                    </div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container"><img src="images/Male.webp" alt="Executive 2" class="profile-img"></div>
+                                        <div class="name">Khairulanwar Bin Abu Shah</div>
+                                        <div class="title">AME (ROSJ)</div>
+                                    </div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container"><img src="images/female.webp" alt="Executive 2" class="profile-img"></div>
+                                        <div class="name">Khairunisa Bt. Harun</div>
+                                        <div class="title">AME (ROMNJ)</div>
+                                    </div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container"><img src="images/Male.webp" alt="Executive 2" class="profile-img"></div>
+                                        <div class="name">Retzuan Izany B. Othman</div>
+                                        <div class="title">Executive</div>
+                                    </div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container"><img src="images/Male.webp" alt="Executive 2" class="profile-img"></div>
+                                        <div class="name">Abd Halim B. Che Idris</div>
+                                        <div class="title">Executive</div>
+                                    </div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container"><img src="images/athirah passport.webp" alt="Executive 2" class="profile-img"></div>
+                                        <div class="name">Siti Athirah Bt. Abdul Ghani</div>
+                                        <div class="title">Executive</div>
+                                    </div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container"><img src="images/solehah.webp" alt="Executive 2" class="profile-img"></div>
+                                        <div class="name">Nor Soleha Bt. Othman</div>
+                                        <div class="title">Executive</div>
+                                    </div>
+                                    <div class="node-simple">
+                                        <div class="profile-img-container"><img src="images/Nazree.webp" alt="Executive 2" class="profile-img"></div>
+                                        <div class="name">Nazree B. Dol Bahar</div>
+                                        <div class="title">Web Developer / Data Engineer</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+            } else if (section === 'who') {
+                htmlContent = `
+                    <h2 style="color: #333;">Who We Are</h2>
+                    <p>Medivest sentiasa berada di barisan hadapan dalam memastikan bahawa standard penjagaan kesihatan awam di Malaysia sentiasa dipertingkatkan.</p>
+                    <p style="font-style: italic; color: #333;">Medivest has been at the forefront in ensuring that public healthcare standards in Malaysia are continuously raised.</p>
+                `;
+            } else if (section === 'vision') {
+                pageTitle = 'Visi & Misi';
+               htmlContent = `
+                    <h3 style="color: #333;">Visi</h3>
+                    <p>Menjana Masa Hadapan yang Lebih Gemilang ke Arah Negara yang Mampan.</p>
+                    <p style="font-style: italic; color: #333;">Shaping Greater Future Towards Sustainable Nation.</p>
+
+                    <h3 style="color: #333; margin-top: 20px;">Misi</h3>
+                    <ol>
+                        <li>
+                            Mengukuhkan kompetensi dan profesionalisme warga kerja melalui integriti, komitmen, dan semangat inovasi.<br>
+                            <span style="font-style: italic; color: #333;">Strengthen staff competency and professionalism through integrity, commitment, and innovative spirit.</span>
+                        </li>
+                        <li>
+                            Mengaplikasi teknologi mampan dan amalan terbaik dalam penyampaian perkhidmatan sokongan hospital.<br>
+                            <span style="font-style: italic; color: #333;">Apply sustainable technology and best practices in hospital support service delivery.</span>
+                        </li>
+                        <li>
+                            Menjalin kerjasama strategik dengan pihak berkepentingan untuk memberikan nilai tambah dan kepuasan pelanggan.<br>
+                            <span style="font-style: italic; color: #333;">Foster strategic partnerships with stakeholders to deliver added value and customer satisfaction.</span>
+                        </li>
+                        <li>
+                            Menjadi peneraju dalam perkhidmatan sokongan hospital bertaraf dunia melalui kecemerlangan operasi dan penambahbaikan berterusan.<br>
+                            <span style="font-style: italic; color: #333;">Lead in world-class hospital support services through operational excellence and continuous improvement.</span>
+                        </li>
+                    </ol>
+                `;
+
+            } else if (section === 'media') {
+                pageTitle = 'Galeri Media & Acara FEMS';
+                htmlContent = `
+                    <h3>Lagu Medivest Sdn Bhd</h3>
+                    <div class="video-container">
+                        <video controls muted loop autoplay playsinline>
+                            <source src="videos/Lagu Medivest.mp4" type="video/mp4">
+                            Pelayar anda tidak menyokong video ini.
+                        </video>
+                    </div>
+                    
+                    <h3 style="margin-top: 30px;">Galeri Gambar</h3>
+                        <div class="slideshow-container">
+                            <div class="mySlides fade" id="carousel-track">
+                                <div class="gallery-slide-group">
+                                    
+                                    <div class="slide-item" onclick="openModal(this.querySelector('img'))">
+                                        <div class="aspect-ratio-box">
+                                            <img src="images/FEMS HQ.jpg" alt="Img 2">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="slide-item" onclick="openModal(this.querySelector('img'))">
+                                        <div class="aspect-ratio-box">
+                                            <img src="images/Task Force Muar.jpg" alt="Img 3">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="slide-item" onclick="openModal(this.querySelector('img'))">
+                                        <div class="aspect-ratio-box">
+                                            <img src="images/TF Muar 2.jpg" alt="Img 4">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="slide-item" onclick="openModal(this.querySelector('img'))">
+                                        <div class="aspect-ratio-box">
+                                            <img src="images/TF Muar 3.jpg" alt="Img 5">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="slide-item" onclick="openModal(this.querySelector('img'))">
+                                        <div class="aspect-ratio-box">
+                                            <img src="images/TF Muar 4.jpg" alt="Img 6">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="slide-item" onclick="openModal(this.querySelector('img'))">
+                                        <div class="aspect-ratio-box">
+                                            <img src="images/nazree cat.jpg" alt="Img 7">
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                            <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+                            <a class="next" onclick="plusSlides(1)">&#10095;</a>
+                        </div>
+                `;
+            } else {
+                // Paparan lalai jika tiada pilihan dibuat
+                htmlContent = `
+                    <h2>Selamat Datang ke Halaman About Us</h2>
+                    <p>Sila pilih seksyen dari menu untuk melihat maklumat terperinci.</p>
+                `;
+            }
+            
+            displayDiv.innerHTML = htmlContent;
+        }
+        // ==========================================================
+        // EVENT LISTENER (Dijalankan apabila laman dimuatkan)
+        // ==========================================================
+        document.addEventListener('DOMContentLoaded', () => {
+            displayContent();
+        });
+        
+    </script>
+</body>
+</html>

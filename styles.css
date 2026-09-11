@@ -1,0 +1,923 @@
+/* ==========================================================
+   GAYA UMUM & HEADER
+   ========================================================== */
+body {
+    font-family: Arial, sans-serif;
+    /* Guna laluan relatif atau URL lengkap yang tepat */
+    background-image: url('https://raw.githubusercontent.com/femsmedivest-sys/Critical-System-FEMS-Medivest/main/IT2.webp'); 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    margin: 0;
+    padding: 0;
+    padding-top: 100px;
+}
+
+/* Header */
+.main-header {
+    background-color: #ffffff;
+    color: rgb(0, 0, 0);
+    padding: 10px 20px;
+    font-size: 1.2em;
+    text-align: center;
+    position: fixed;
+    top: 0;
+    width: 99%;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    background-image: url('https://raw.githubusercontent.com/femsmedivest-sys/Critical-System-FEMS-Medivest/main/header.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Container untuk TAJUK, Jam dan Menu (Pusat Header) */
+.title-and-menu-wrapper {
+    display: flex;
+    flex-direction: column; 
+    align-items: center; 
+    flex-grow: 1; 
+}
+
+/* Container untuk menyusun Jam dan Dropdown secara mendatar */
+.title-menu-bar {
+    display: flex;
+    flex-direction: row; 
+    align-items: center; 
+    gap: 20px; 
+    margin: 5px 0; 
+}
+
+.main-header h1 {
+    margin: 5px 0; 
+    font-size: 1.2em;
+    color: #4b4b4b;
+    text-align: center;
+}
+
+/* Widget Masa */
+#time-widget {
+    margin: 0 !important; 
+}
+
+/* Gaya Butang About Us (Kotak Merah Kecil) */
+.about-dropbtn {
+    background-color: #dddddd; 
+    color: #4b4b4b;
+    padding: 5px 10px; 
+    font-size: 13px; 
+    border: 1px solid #b6b6b6; 
+    cursor: pointer;
+    border-radius: 20px; 
+    position: relative; 
+    z-index: 1002;
+    transition: background-color 0.9s;
+    text-align: center;
+}
+
+.about-dropbtn:hover, .about-dropbtn:focus {
+    background-color: #fafafa;
+}
+
+/* Kandungan Dropdown */
+.dropdown-content {
+    display: none; 
+    position: absolute;
+    top: 100%; 
+    left: 0;
+    background-color: #f9f9f9;
+    min-width: 200px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1001; 
+    border-radius: 20px;
+}
+
+.dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    text-align: center;
+    font-size: 13px;
+}
+
+.dropdown-content a:hover {
+    background-color: #ddd;
+}
+
+.show {
+    display: block;
+}
+
+/* Gaya logo kekal */
+.header-left, .header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.header-logo {
+    height: 80px;
+    width: auto;
+}
+
+.header-logo2 {
+    height: 80px;
+    width: auto;
+}
+
+/* Gaya Kontena Utama */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Gaya Grid Kad */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+/* === GAYA KAD BARU DENGAN BACKGROUND IMAGE (GLOBAL) === */
+.card {
+    /* Gaya ASAL dikekalkan */
+    border-radius: 30px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px; 
+
+    /* === GAYA BACKGROUND BARU === */
+    background-color: #2e2e2eba; /* Fallback jika imej gagal */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    color: white; /* Tukar teks utama kepada putih */
+    position: relative; /* Penting untuk kedudukan overlay */
+    overflow: hidden;
+    z-index: 1; 
+    border: none; /* Buang border */
+}
+
+/* GAYA HOVER BARU */
+.card:hover {
+    /* background-color: #ffffff; <--- DIKELUARKAN */
+    transform: scale(1.05); /* Transformasi hover yang lebih licin */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 1.5em;
+    color: white; /* Wajib putih untuk latar belakang gelap */
+    position: relative; 
+    z-index: 3; /* Pastikan di atas overlay */
+}
+
+/* === GAYA OVERLAY BARU (GLOBAL) === */
+.card-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Latar belakang hitam lutsinar (40% lutsinar) */
+    background-color: rgba(0, 0, 0, 0.4); 
+    z-index: 2;                   
+    border-radius: 30px;          
+}
+
+
+/* Gaya Tajuk Negeri */
+.state-header {
+    grid-column: 1 / -1; 
+    text-decoration: underline;
+    font-size: 1.5em;
+    margin-top: 20px;
+    margin-bottom: 5px;
+    text-align: left;
+    font-weight: bold;
+    color: #424242;
+}
+
+/* Gaya Butang Navigasi */
+.home-button, .back-button {
+    background-color: #ffffff;
+    color: #000000;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 0.9em;
+    border: 1px solid #838383;
+    transition: background-color 0.3s ease;
+}
+
+.home-button:hover, .back-button:hover {
+    background-color: #b5b5b5;
+    transform: translateY(-5px);
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+}
+
+/* Gaya untuk Butang Borang */
+.form-button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    display: block;
+    margin: 15px auto;
+    text-align: center;
+    transition: background-color 0.3s ease;
+    max-width: 300px;
+}
+
+.form-button:hover {
+    background-color: #0056b3;
+}
+
+/* Gaya untuk Halaman Hospital */
+.location-section {
+    background-color: #62626239;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.location-section h2 {
+    text-align: center;
+    color: #ffffff;
+    background-color: #424242;
+    padding: 5px 5px;
+    border-radius: 20px;
+    box-shadow: 0 2px 4px rgba(133, 70, 70, 0.05);
+    margin-bottom: 20px;
+    border: 1px solid #86ffe5;
+}
+
+.asset-card {
+    background-color: #efeeee;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+    transition: transform 0.2s ease;
+    border: 1px solid #838383;
+}
+
+.asset-card:hover {
+    transform: scale(1.03);
+}
+
+.asset-card h3 {
+    margin: 0;
+    font-size: 1.2em;
+    color: #333;
+    text-align: center;
+}
+
+.asset-card p {
+    margin: 0;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.last-update {
+    font-style: italic;
+    font-weight: bold;
+    font-size: 0.8em;
+    color: #4b4b4b;
+    margin-top: 10px;
+}
+
+/* Semak gaya untuk status box juga */
+.status-box {
+    /* Pastikan warna latar belakang status box cukup legap untuk dibaca */
+    background-color: rgba(255, 255, 255, 0.2); /* Contoh: Latar belakang status box lutsinar sedikit */
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.9em;
+    font-weight: bold;
+    display: inline-block;
+    text-align: center;
+}
+
+.status-FUNCTIONING {
+    background-color: #26ff00; 
+}
+
+.status-NOT-FUNCTIONING {
+    background-color: #ff0000;
+}
+
+/* Gaya untuk Status Container di halaman utama */
+.status-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 0.9em;
+    width: 100%;
+    position: relative; /* Penting untuk z-index */
+    z-index: 3; /* Lebih tinggi dari overlay */
+}
+/* Kembalikan warna teks status ke hitam agar kotak status menonjol */
+.status-box {
+    color: #000000 !important;
+    z-index: 4;
+}
+
+/* Gaya untuk Loading Spinner */
+.loading-spinner {
+    border: 8px solid #e1ff00;
+    border-top: 8px solid #000292;
+    border-radius: 50%;
+    width: 70px;
+    height: 70px;
+    animation: spin 0.5s linear infinite;
+    margin: 50px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+/* Gaya untuk Galeri Gambar */
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+    gap: 15px; 
+    margin-top: 15px;
+}
+
+.gallery-image {
+    width: 100%;
+    height: auto;
+    object-fit: cover; 
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Gaya Video */
+.video-container {
+    max-width: 800px; 
+    margin: 20px auto; 
+}
+
+.video-container video {
+    width: 100%; 
+    height: auto;
+    display: block;
+}
+
+/* ==========================================================
+   GAYA CARTA ORGANISASI (Organization Chart)
+   ========================================================== */
+
+/* Kontena Induk Carta: Memegang garisan tegak */
+.org-simple-container {
+    padding: 20px;
+    background-color: #fcfcfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    position: relative; 
+}
+
+/* Garisan Utama di Sebelah Kiri Carta (Induk) */
+.org-simple-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 20px; 
+    width: 0;
+    height: 100%;
+    border-left: 2px solid #ddd;
+    z-index: 1; 
+}
+
+/* Kontena Tahap (Memegang semua kotak dalam satu baris) */
+.level {
+    display: flex;
+    justify-content: center; 
+    align-items: flex-start;
+    gap: 20px; 
+    margin-bottom: 30px; 
+    padding: 10px 0 10px 20px; 
+    position: relative;
+    z-index: 5;
+    border-bottom: none;
+}
+
+/* Garisan Mendatar (Lurus) */
+.level::before {
+    content: '';
+    position: absolute;
+    top: 20px; 
+    left: 0;
+    height: 0;
+    width: 15px; 
+    border-top: 2px solid #ddd;
+    z-index: 2;
+}
+
+/* Buang garisan pada Tahap 1 (HOD) */
+.level-1 {
+    padding: 10px 0 10px 0; 
+    margin-bottom: 10px;
+}
+.level-1::before {
+    content: none;
+}
+
+/* ==========================================================
+   GAYA UNTUK STRUKTUR CABANG (Flexbox)
+   ========================================================== */
+
+/* Kontena untuk memegang 2 Cabang Utama secara mendatar */
+.main-branch {
+    display: flex;
+    justify-content: space-around; 
+    align-items: flex-start;
+    gap: 30px; 
+    margin: 20px 0;
+    padding: 0;
+    border-bottom: none !important;
+}
+
+/* Cabang Individu (O&M dan Management) */
+.sub-branch {
+    flex-basis: 48%; 
+    display: flex;
+    flex-direction: column; 
+    align-items: center;
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #f7f7f7;
+    min-height: 300px;
+}
+
+/* Sub-Cabang O&M: Menguruskan susunan Region dan Resource side-by-side */
+.level-3-om {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    width: 100%;
+    margin-top: 10px;
+    padding: 0;
+    border-bottom: none;
+}
+.level-3-om::before {
+    content: none;
+}
+
+/* ==========================================================
+   MEDIA QUERIES (Responsif)
+   ========================================================== */
+@media (max-width: 768px) {
+    .main-header {
+        flex-direction: column;
+        align-items: center;
+        padding: 10px;
+        height: auto;
+    }
+
+    .header-logo, .header-logo2 {
+        height: 50px;
+        width: auto;
+    }
+    
+    .title-and-menu-wrapper {
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .main-header h1 {
+        font-size: 1em;
+        margin: 5px 0;
+    }
+    
+    .title-menu-bar {
+        flex-direction: column; 
+        gap: 5px;
+        margin: 5px 0;
+    }
+
+    .container {
+        padding-top: 130px;
+    }
+
+    .button-group {
+        flex-direction: row;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .back-button, .home-button, .link-button {
+        padding: 8px 12px;
+        font-size: 0.8em;
+    }
+
+    .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+    }
+
+    .form-button {
+        width: 90%;
+        font-size: 0.9em;
+    }
+
+    /* Responsif Carta Organisasi */
+    .main-branch {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    .sub-branch {
+        min-height: auto;
+        padding: 10px;
+        flex-basis: 100%;
+        width: 100%;
+    }
+    .level-3-om {
+        flex-direction: column; 
+        gap: 15px;
+    }
+    .role-group {
+        width: 100%; 
+    }
+}
+
+/* ==========================================================
+   PENETAPAN BACKGROUND IMAGE INDIVIDU
+   (Sila pastikan semua gambar berada di folder "Gambar/" dan namanya betul)
+   ========================================================== */
+/* === NEGERI SEMBILAN === */
+#card-TUANKU-JAAFAR {
+    background-image: url('images/HTJ.webp'); 
+}
+#card-KPL-KUALA-PILAH {
+    background-image: url('images/KPL.webp');
+}
+#card-JMP-JEMPOL {
+    background-image: url('images/JMP.webp');
+}
+#card-JLB-JELEBU {
+    background-image: url('images/JLB.webp');
+}
+#card-PDX-PORT-DICKSON {
+    background-image: url('images/PDX.webp');
+}
+#card-TMP-TAMPIN {
+    background-image: url('images/TMP.webp');
+}
+
+/* === MELAKA === */
+#card-MKA-MLK {
+    background-image: url('images/MKA.webp');
+}
+#card-JSN-JASIN {
+    background-image: url('images/JSN.webp');
+}
+#card-AGJ-ALOR-GAJAH {
+    background-image: url('images/AGJ.webp');
+}
+
+/* === JOHOR === */
+#card-HSA-JOHOR {
+    background-image: url('images/HSA.webp');
+}
+#card-HSI-JOHOR {
+    background-image: url('images/HSI.webp');
+}
+#card-HPSF-MUAR {
+    background-image: url('images/MUR.webp');
+}
+#card-HTSMTI-KULAI {
+    background-image: url('images/KUL.webp');
+}
+#card-KLN-KLUANG {
+    background-image: url('images/KLN.webp');
+}
+#card-BPH-BATU-PAHAT {
+    background-image: url('images/BPH.webp');
+}
+#card-PON-PONTIAN {
+    background-image: url('images/PON.webp');
+}
+#card-SEG-SEGAMAT {
+    background-image: url('images/SEG.webp');
+}
+#card-KTG-KOTA-TINGGI {
+    background-image: url('images/KTG.webp');
+}
+#card-MER-MERSING {
+    background-image: url('images/MER.webp');
+}
+#card-TGK-TANGKAK {
+    background-image: url('images/TGK.webp');
+}
+#card-MKJ-JB {
+    background-image: url('images/MKJ.webp');
+}
+#card-PER-PERMAI {
+    background-image: url('images/PER.webp');
+}
+#card-PGD-PASIR-GUDANG{
+    background-image: url('images/PGD.webp');
+}
+#card-PAN-Pantai{
+    background-image: url('images/Pantai.jpg');
+}
+
+/* sila tambah disini untuk overlay wallpaper */
+
+/* ==========================================================
+   GAYA FOOTER (BAHAGIAN BAWAH) - GABUNGAN DARI RESPONS SEBELUMNYA
+   ========================================================== */
+.main-footer {
+    background-color: #040154e3; /* Biru gelap seperti dalam imej */
+    color: white;
+    padding: 40px 20px;
+    margin-top: 50px; 
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap; 
+    gap: 30px;
+}
+
+.footer-section {
+    flex-basis: 30%; 
+    min-width: 250px; 
+}
+
+.footer-section h2 {
+    font-size: 1.8em;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-align: left;
+    color: #ffffff;
+}
+
+.footer-section h4 {
+    font-size: 1em;
+    font-weight: bold;
+    margin: 15px 0 5px 0;
+    text-transform: uppercase;
+}
+
+.footer-section p {
+    margin: 3px 0;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+/* Gaya Pautan Anak Syarikat */
+.subsidiary-logos {
+    display: flex;
+    /* Ubah ini: Susun di tengah dan gunakan ruang untuk paparan logo */
+    /* KUNCI UTAMA: Menyusun item dari kiri ke kanan (default) kepada atas ke bawah */
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center;
+    gap: 1px;
+    flex-basis: 30%;
+    margin-top: 0px; 
+}
+
+/* Gaya Pautan Anak Syarikat (Social Links / Subsidiary Logos) */
+.subsidiary-logos a {
+    /* MESTI ADA: Tetapkan saiz bekas setiap logo */
+    display: flex; /* Guna flex untuk pusat imej di dalamnya */
+    justify-content: center;
+    align-items: center;
+    width: 70px; /* TETAPKAN LEBAR DISINI */
+    height: 70px; /* TETAPKAN KETINGGIAN DISINI */
+    transition: transform 0.3s;
+    /* Anda boleh buang background-color: white dan border-radius: 50% yang lama */
+}
+
+.subsidiary-logos a:hover {
+    transform: scale(1.15); /* Efek zoom apabila hover */
+}
+
+/* Gaya untuk imej logo sebenar di dalam Footer */
+.subsidiary-logos a img {
+    width: 200%;
+    height: 200%;
+    object-fit: contain; /* Pastikan imej dimuatkan sepenuhnya tanpa dipotong */
+    /* Jika logo WORKSHOP2U hitam, gunakan filter ini untuk menjadikannya putih: */
+    /* filter: invert(100%); */ 
+}
+
+/* Media Query untuk Footer Responsif */
+@media (max-width: 800px) {
+    .footer-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 20px;
+    }
+
+    .footer-section {
+        flex-basis: 100%;
+        min-width: 100%;
+        text-align: center;
+    }
+
+    .footer-section h2, .footer-section h4 {
+        text-align: center;
+    }
+
+    .address-info {
+        order: 1;
+    }
+
+    .social-links {
+        order: 2;
+        margin-top: 10px;
+        justify-content: center;
+        /* Tambah ini: Membenarkan logo dibalut ke bawah jika skrin terlalu sempit */
+        flex-wrap: wrap; 
+    }
+
+    .copyright {
+        order: 3;
+        text-align: center;
+    }
+}
+
+#myBtn {
+        display: none; /* Hidden by default */
+        position: fixed; /* Fixed/sticky position */
+        bottom: 20px; /* Place the button at the bottom of the page */
+        right: 30px; /* Place the button 30px from the right */
+        z-index: 99; /* Make sure it does not overlap */
+        border: none; /* Remove borders */
+        outline: none; /* Remove outline */
+        background-color: rgba(205, 203, 203, 0.82); /* Set a background color */
+        color: white; /* Text color */
+        cursor: pointer; /* Add a mouse pointer on hover */
+        padding: 15px; /* Some padding */
+        border-radius: 10px; /* Rounded corners */
+        font-size: 18px; /* Increase font size */
+        }
+
+        #myBtn:hover {
+        background-color: #555; /* Add a dark-grey background on hover */
+        }
+
+/* ========================
+// Gaya Floating Button
+// ========================*/
+
+.floating-btn {
+    position: fixed;
+    bottom: 5px; /* Jarak dari bawah */
+    left: 20px;  /* Jarak dari kanan */
+    z-index: 1000; /* Pastikan ia sentiasa di atas */
+    display: flex;
+    align-items: center;
+    background-color: #e2ff3d; /* Warna Hijau/Biru yang berbeza */
+    color: rgb(0, 0, 0);
+    padding: 12px 20px;
+    border-radius: 50px; /* Bentuk pil/bujur */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    text-decoration: none;
+    font-weight: 700;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.floating-btn:hover {
+    background-color: #000145; /* Warna lebih gelap bila hover */
+    transform: translateY(-2px);
+    color: rgb(255, 255, 255);
+}
+
+.floating-btn svg {
+    height: 24px;
+    width: 24px;
+}
+
+/* Responsif: Kecilkan dan buang teks pada skrin sangat kecil */
+@media (max-width: 600px) {
+    .floating-btn {
+        padding: 15px; /* Jadikan butang bulat */
+    }
+    .floating-btn span {
+        display: none !important; /* Sembunyikan teks pada mobile */
+    }
+}
+
+/* =========================================================
+   GAYA UNTUK KAD SISTEM KRITIKAL (hospital-page.html)
+   ========================================================== */
+
+/* Susun atur Grid untuk Kad Sistem */
+.system-grid {
+    display: grid;
+    /* Meningkatkan lebar minimum untuk kad yang lebih besar jika perlu */
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+    gap: 20px; 
+    padding: 20px 10px; 
+}
+
+/* 2. KAD UTAMA (Wajib guna position: relative) */
+.system-card {
+    position: relative; 
+    display: flex;         
+    flex-direction: column; 
+    align-items: center;   
+    justify-content: center; 
+    /* Gaya Visual */
+    /* ... */
+    padding: 10px;        /* Diubah: Kurangkan padding dalaman */
+    border-radius: 12px;
+    /* PERUBAHAN UTAMA UNTUK SAIZ SEPERTI YANG DIMINTA */
+    min-height: 150px;    /* Diubah: Menjadikan kad lebih pendek/rendah */
+    overflow: hidden; 
+    text-decoration: none; 
+    color: white; 
+}
+
+.card-title {
+    position: relative; 
+    z-index: 2;        
+    color: white;      
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8); 
+    font-size: 1.5em; /* Jadikan tajuk lebih besar jika perlu */
+    font-weight: bold; /* Pastikan ia tebal/bold */
+    margin-bottom: 10px; /* Tambah jarak di bawah tajuk */
+    text-align: center;
+}
+
+.card-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* NILAI BARU: 0.2 untuk gambar yang lebih CERAH */
+    background-color: rgba(0, 0, 0, 0.2); 
+    z-index: 1; /* Di atas gambar, di bawah teks */
+    border-radius: 12px; 
+}
+
+.system-card:hover {
+    transform: translateY(-3px); 
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Gaya Gambar di dalam Kad */
+.card-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Memenuhi keseluruhan kad */
+    z-index: 0; /* Di lapisan paling bawah */
+    margin: 0;
+}
+
+/* Pastikan Status Container diletakkan di bawah tajuk */
+.system-card .status-container {
+    position: relative; 
+    z-index: 2;
+    /* Hilangkan margin atas jika ia menolak ke tengah */
+    margin-top: 0; 
+}

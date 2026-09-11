@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- SEO improvement -->
+    <meta name="description" content="Critical System Monitoring for FEMS Medivest - real-time monitoring of hospital facilities, ensuring reliability and safety.">
+    <meta name="keywords" content="FEMS, Critical System, Medivest, Hospital Monitoring, Facilities Engineering Management Services">
+
+    <title>FEMS Critical System</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Preload gambar penting -->
+    <link rel="preload" as="image" href="medivest.webp">
+    <link rel="preload" as="image" href="anything is possible.webp">
+</head>
+<body>
+    <header class="main-header">
+        <button onclick="topFunction()" id="myBtn" title="Go to top">🔼</button> 
+
+        <div class="header-left">
+            <img src="medivest.webp" alt="Logo Syarikat" class="header-logo" width="200" height="80">
+        </div>
+        
+        <div class="title-and-menu-wrapper">
+            
+            <h1>Facilities Engineering Management Services (FEMS) - Critical System Monitoring</h1>
+            
+            <div class="title-menu-bar">
+                
+                <div id="time-widget" class="text-xss font-bold text-center text-gray-700 mt-4 mb-4" style="font-size: 15px !important;">
+                    Loading Time...
+                </div>
+                
+                <button class="about-dropbtn">
+                    About Us ▾
+                    
+                    <div id="aboutDropdown" class="dropdown-content">
+                        <a href="about.html?section=chart" class="dropdown-item">Organization Chart</a>
+                        <a href="about.html?section=who" class="dropdown-item">Who We Are</a>
+                        <a href="about.html?section=vision" class="dropdown-item">Vision & Mission</a>
+                        <a href="about.html?section=media" class="dropdown-item">Media & Event</a>
+                    </div>
+                </button>
+            </div>
+        </div>
+        
+        <div class="header-right"> 
+            <img src="anything is possible.webp" alt="Slogan Medivest" class="header-logo2" width="200" height="80">
+        </div>
+        
+    </header>
+
+    <main class="container">
+        
+        <section class="hospital-list-section">
+    <div id="loading-spinner" class="loading-spinner"></div>
+    <div class="card-grid">
+
+        <h2 class="state-header">NEGERI SEMBILAN:</h2>
+        <a class="card" id="card-TUANKU-JAAFAR" href="hospital-page.html?hosp=TUANKU-JAAFAR">
+            <div class="card-overlay"></div>
+            <h3>Hospital Tuanku Ja'afar, Seremban</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-KPL-KUALA-PILAH" href="hospital-page.html?hosp=KPL-KUALA-PILAH">
+            <div class="card-overlay"></div>
+            <h3>Hospital Tuanku Ampuan Najihah, Kuala Pilah</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-JMP-JEMPOL" href="hospital-page.html?hosp=JMP-JEMPOL">
+            <div class="card-overlay"></div>
+            <h3>Hospital Jempol</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-JLB-JELEBU" href="hospital-page.html?hosp=JLB-JELEBU">
+            <div class="card-overlay"></div>
+            <h3>Hospital Jelebu</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-PDX-PORT-DICKSON" href="hospital-page.html?hosp=PDX-PORT-DICKSON">
+            <div class="card-overlay"></div>
+            <h3>Hospital Port Dickson</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-TMP-TAMPIN" href="hospital-page.html?hosp=TMP-TAMPIN">
+            <div class="card-overlay"></div>
+            <h3>Hospital Tampin</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+
+        <h2 class="state-header">MELAKA:</h2>
+        <a class="card" id="card-MKA-MLK" href="hospital-page.html?hosp=MKA-MLK">
+            <div class="card-overlay"></div>
+            <h3>Hospital Melaka</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-JSN-JASIN" href="hospital-page.html?hosp=JSN-JASIN">
+            <div class="card-overlay"></div>
+            <h3>Hospital Jasin</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-AGJ-ALOR-GAJAH" href="hospital-page.html?hosp=AGJ-ALOR-GAJAH">
+            <div class="card-overlay"></div>
+            <h3>Hospital Alor Gajah</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+
+        <h2 class="state-header">JOHOR:</h2>
+        <a class="card" id="card-HSA-JOHOR" href="hospital-page.html?hosp=HSA-JOHOR">
+            <div class="card-overlay"></div>
+            <h3>Hospital Sultanah Aminah, Johor Bahru</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-HSI-JOHOR" href="hospital-page.html?hosp=HSI-JOHOR">
+            <div class="card-overlay"></div>
+            <h3>Hospital Sultan Ismail, Johor Bahru</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-HPSF-MUAR" href="hospital-page.html?hosp=HPSF-MUAR">
+            <div class="card-overlay"></div>
+            <h3>Hospital Pakar Sultanah Fatimah, Muar</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-HTSMTI-KULAI" href="hospital-page.html?hosp=HTSMTI-KULAI">
+            <div class="card-overlay"></div>
+            <h3>Hospital Temenggong Seri Maharaja Tun Ibrahim, Kulai</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-KLN-KLUANG" href="hospital-page.html?hosp=KLN-KLUANG">
+            <div class="card-overlay"></div>
+            <h3>Hospital Enche' Besar Hajjah Khalsom</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-BPH-BATU-PAHAT" href="hospital-page.html?hosp=BPH-BATU-PAHAT">
+            <div class="card-overlay"></div>
+            <h3>Hospital Batu Pahat</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-PON-PONTIAN" href="hospital-page.html?hosp=PON-PONTIAN">
+            <div class="card-overlay"></div>
+            <h3>Hospital Pontian</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-SEG-SEGAMAT" href="hospital-page.html?hosp=SEG-SEGAMAT">
+            <div class="card-overlay"></div>
+            <h3>Hospital Segamat</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-KTG-KOTA-TINGGI" href="hospital-page.html?hosp=KTG-KOTA-TINGGI">
+            <div class="card-overlay"></div>
+            <h3>Hospital Kota Tinggi</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-MER-MERSING" href="hospital-page.html?hosp=MER-MERSING">
+            <div class="card-overlay"></div>
+            <h3>Hospital Mersing</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-TGK-TANGKAK" href="hospital-page.html?hosp=TGK-TANGKAK">
+            <div class="card-overlay"></div>
+            <h3>Hospital Tangkak</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-MKJ-JB" href="hospital-page.html?hosp=MKJ-JB">
+            <div class="card-overlay"></div>
+            <h3>Makmal Kesihatan Awam Johor</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-PER-PERMAI" href="hospital-page.html?hosp=PER-PERMAI">
+            <div class="card-overlay"></div>
+            <h3>Hospital Permai</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-PGD-PASIR-GUDANG" href="hospital-page.html?hosp=PGD-PASIR-GUDANG">
+            <div class="card-overlay"></div>
+            <h3>Hospital Pasir Gudang (Coming Soon)</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <a class="card" id="card-PAN-Pantai" href="hospital-page.html?hosp=PAN-Pantai">
+            <div class="card-overlay"></div>
+            <h3>Hospital Pantai (Coming Soon)</h3>
+            <div class="status-container">
+                <span class="status-box status-FUNCTIONING">FUNCTIONING: --</span>
+                <span class="status-box status-NOT-FUNCTIONING">NOT FUNCTIONING: --</span>
+            </div>
+        </a>
+        <!-- Sila tambah hospital disini -->
+    </div>
+</section>
+    </main>
+        <footer class="main-footer">
+                <div class="footer-content">
+                    <div class="footer-section address-info">
+                        <h2>Contact Us</h2>
+                        <div class="contact-group">
+                            <h4>Medivest Sdn Bhd</h4>
+                            <p>Suite 13.01, Penthouse, Wisma E & C</p>
+                            <p>No. 2, Lorong Dungun Kiri</p>
+                            <p>Bukit Damansara</p>
+                            <p>50490 Kuala Lumpur</p>
+                            <p>Wilayah Persekutuan Kuala Lumpur</p>
+                        </div>
+                        <div class="contact-group">
+                            <h4>Email</h4>
+                            <p>custsvc@medivest.com.my</p>
+                        </div>
+                    </div>
+                    
+                        <div class="footer-section subsidiary-logos">
+                            <h2>Our Subsidiaries</h2>
+                            <a href="https://workshop2u.com.my/v01/" target="_blank">
+                                <img src="images/W2U.webp" alt="W2U">
+                            </a>
+                            <a href="https://www.medivest-engineering.com.my/" target="_blank">
+                                <img src="images/MESB.webp" alt="MESB">
+                            </a>
+                            <a href="https://masaero.com.my/" target="_blank">
+                                <img src="images/MASAERO.webp" alt="MASAERO">
+                            </a>
+                        </div>
+                </div>
+            </footer>
+    <script src="script.js"></script>
+
+            <div id="floating-action-buttons">
+        
+                <a href="Panduan Menggunakan Website (Update Critical System).pdf" target="_blank" id="panduan-btn" class="floating-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="ml-2 hidden sm:inline">Panduan Penggunaan</span>
+                </a> 
+            </div>
+
+            <script>
+            // --- FUNGSI WIDGET MASA ---
+            function updateTimeWidget() {
+                const now = new Date();
+                
+                // Tetapkan pilihan format masa
+                const options = {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true, // Guna format 12 jam (e.g., 03:45:00 PM)
+                    // Anda boleh menukar ini kepada false untuk format 24 jam
+                };
+
+                // Dapatkan masa yang diformat
+                const formattedTime = now.toLocaleTimeString('en-US', options);
+
+                // Dapatkan tarikh yang diformat (Hari, Tarikh Penuh)
+                const dateOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+                const formattedDate = now.toLocaleDateString('en-US', dateOptions);
+
+                // Gabungkan dan kemas kini elemen HTML
+                const timeWidget = document.getElementById('time-widget');
+                if (timeWidget) {
+                    // Memaparkan Hari, Tarikh, dan Masa
+                    timeWidget.innerHTML = `${formattedDate} | ${formattedTime}`;
+                }
+            }
+
+            // Panggil fungsi sekali untuk memaparkan masa segera
+            updateTimeWidget();
+
+            // Panggil fungsi setiap 1000 milisaat (1 saat) untuk mengemas kini masa secara langsung
+            setInterval(updateTimeWidget, 1000);
+        </script>
+
+       
+</body>
+</html>

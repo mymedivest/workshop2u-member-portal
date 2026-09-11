@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">Critical System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<button onclick="topFunction()" id="myBtn" title="Go to top">🔼</button> 
+        <header class="main-header">
+    <div class="logo-container left-logo logo-and-time-wrapper">
+         <img src="medivest.webp" alt="Medivest Logo" class="header-logo">
+        <div id="time-widget" class="text-xxs font-bold text-gray-700 mt-2 mb-1" style="font-size: 15px !important;"> 
+            Loading Time...
+        </div>
+    </div>
+    
+    <div class="title-home-container">
+        <h1 id="header-title"></h1>
+        <div class="button-group">
+            <a href="#" id="back-button" class="back-button" style="display: none;">Return to System List</a>
+            <a href="Critical-System.html" class="home-button">Home</a>
+        </div>
+    </div>
+    
+    <div class="logo-container right-logo">
+        <img src="anything is possible.webp" alt="Anything is Possible Logo" class="header-logo2">
+    </div>
+</header>
+
+    <main class="container">
+        </main>
+        <footer class="main-footer">
+                <div class="footer-content">
+                    <div class="footer-section address-info">
+                        <h2>Contact Us</h2>
+                        <div class="contact-group">
+                            <h4>FEMS HQ</h4>
+                            <p>Jika websibe ini gagal untuk melihat</p>
+                            <p>sila hubungi 012-3456495 (Nazree)</p>
+                        </div>
+                        <div class="contact-group">
+                            <h4>Email</h4>
+                            <p>mohamad.nazree@medivest.com.my</p>
+                        </div>
+                    </div>
+                    
+                        <div class="footer-section subsidiary-logos">
+                            <h2>Our Subsidiaries</h2>
+                            <a href="https://workshop2u.com.my/" target="_blank">
+                            <img src="images/W2U.webp" alt="W2U">
+                            </a>
+                            <a href="https://www.medivest-engineering.com.my/" target="_blank">
+                            <img src="images/MESB.webp" alt="MESB">
+                            </a>
+                            <a href="https://masaero.com.my/" target="_blank">
+                            <img src="images/MASAERO.webp" alt="MASAERO">
+                            </a>
+                        </div>
+                </div>
+            </footer>
+    <script src="script.js"></script>
+        <div id="floating-action-buttons">
+        
+                <a href="Panduan Menggunakan Website (Update Critical System).pdf" target="_blank" id="panduan-btn" class="floating-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="ml-2 hidden sm:inline">Panduan Penggunaan</span>
+                </a> 
+            </div>
+        <script>
+        // --- FUNGSI WIDGET MASA ---
+        function updateTimeWidget() {
+            const now = new Date();
+            
+            const options = {
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true, 
+            };
+
+            const formattedTime = now.toLocaleTimeString('en-US', options);
+            const dateOptions = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            const formattedDate = now.toLocaleDateString('en-US', dateOptions);
+
+            const timeWidget = document.getElementById('time-widget');
+            if (timeWidget) {
+                // Memaparkan Hari, Tarikh, dan Masa
+                timeWidget.innerHTML = `${formattedDate} | ${formattedTime}`;
+            }
+        }
+
+        // Panggil fungsi sekali untuk memaparkan masa segera
+        updateTimeWidget();
+
+        // Panggil fungsi setiap 1000 milisaat (1 saat) untuk mengemas kini masa secara langsung
+        setInterval(updateTimeWidget, 1000);
+    </script>
+
+</body>
+</html>
