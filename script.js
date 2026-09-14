@@ -5,7 +5,8 @@
 
 const CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbzQO0bFEfT3dNEhX2ijR9hytr78pfTEC5k64Z4m0Kpnj_TufQzCohKLb0lkH3GQSECu/exec",
-  WHATSAPP_NUMBER: "60137137100" // digits only, country code first — used by the WhatsApp button
+  //WHATSAPP_NUMBER: "60137137100" // digits only, country code first — used by the WhatsApp button
+  WHATSAPP_NUMBER: "60123456495" // digits only, country code first — used by the WhatsApp button
 };
 
 const SESSION_KEY = "w2u_session";
