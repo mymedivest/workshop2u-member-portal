@@ -68,6 +68,7 @@ function doPost(e) {
 
       case "getMembers": return jsonOut_(getMembers_(body));
       case "addMember": return jsonOut_(addMember_(body));
+      case "updateMemberStatus": return jsonOut_(updateMemberStatus_(body));
       case "getVehicles": return jsonOut_(getVehicles_(body));
 
       case "getAccounts": return jsonOut_(getAccounts_(body));
@@ -82,6 +83,7 @@ function doPost(e) {
 
       case "getReviewContext": return jsonOut_(getReviewContext_(body));
       case "submitReview": return jsonOut_(submitReview_(body));
+      case "getReviews": return jsonOut_(getReviews_(body));
 
       default: return jsonOut_({ success: false, message: "Unknown action." });
     }
@@ -225,6 +227,20 @@ function login_(body) {
     return { success: true, user: createSession_(cred) };
   }
 
+  // Duplicate-request guard: Apps Script Web Apps can occasionally receive
+  // the same POST twice in quick succession (a platform quirk with how the
+  // /exec endpoint serves its response). Without this guard that would send
+  // two different OTP codes for one login click. We use a short-lived cache
+  // lock so only the first request in any 20-second window actually
+  // generates and emails a code — the (near-simultaneous) second request
+  // just gets told a code is already on its way.
+  const cache = CacheService.getScriptCache();
+  const lockKey = "otp_lock_" + username.toLowerCase();
+  if (cache.get(lockKey)) {
+    return { success: true, otpRequired: true, username: cred.Username, message: "A code was already sent — check your email." };
+  }
+  cache.put(lockKey, "1", 20);
+
   const code = randomCode_(6);
   const sh = sheet_("OtpCodes");
   const data = sh.getDataRange().getValues();
@@ -331,6 +347,11 @@ function requestPasswordReset_(body) {
 
   const cred = rowToCredential_(found.values);
   if (!cred.Email) return { success: true, message: genericMsg };
+
+  const cache = CacheService.getScriptCache();
+  const lockKey = "reset_lock_" + cred.Username.toLowerCase();
+  if (cache.get(lockKey)) return { success: true, message: genericMsg };
+  cache.put(lockKey, "1", 20);
 
   const code = randomCode_(6);
   const now = new Date();
@@ -455,9 +476,6 @@ function addHistory_(body) {
 
   // Feature 9 — keep a distinct vehicle registry per member.
   if (rec.username) addVehicleIfNew_(rec.username, rec.plate, rec.vehicleType);
-
-  // Feature 8 — create a pending review row so the link in the email works.
-  sheet_("Reviews").appendRow([reviewToken, rec.username || "", workshop, "", "", "Pending", new Date(), ""]);
 
   logAudit_(user.username, user.role, "HISTORY_ADDED", rec.plate + " @ " + workshop);
 
@@ -629,6 +647,32 @@ function addMember_(body) {
 
   sheet_("Credentials").appendRow([m.username, hashPassword_(m.password), role, workshop, m.fullName, m.address || "", m.phone || "", m.email || "", "Active", new Date()]);
   logAudit_(user.username, user.role, "ACCOUNT_CREATED", m.username + " (" + role + ")");
+  return { success: true };
+}
+
+/**
+ * Deactivate/reactivate a MEMBER (customer) account — this is the "remove
+ * member" action available directly from the Members tab to admin/manager/
+ * webmaster, not just the webmaster-only account manager. We deliberately
+ * deactivate rather than delete the row, so existing History/Vehicles/
+ * Reviews records tied to that username stay intact. Only touches accounts
+ * with Role = "member" — staff accounts must still go through the
+ * webmaster's "Manage Staff Accounts" tab (updateAccount_).
+ */
+function updateMemberStatus_(body) {
+  const auth = requireAuth_(body.token, ["admin", "manager", "webmaster"]);
+  if (!auth.ok) return { success: false, message: auth.error };
+  const user = auth.user;
+
+  const found = findCredentialRow_(body.username);
+  if (!found) return { success: false, message: "Member not found." };
+  const cred = rowToCredential_(found.values);
+  if (cred.Role !== "member") return { success: false, message: "This action only applies to member accounts." };
+  if (user.role === "admin" && cred.WorkshopLocation !== user.workshop) return { success: false, message: "Not your workshop." };
+
+  const cols = credentialColumns_();
+  sheet_("Credentials").getRange(found.rowIndex, cols.indexOf("Status") + 1).setValue(body.status);
+  logAudit_(user.username, user.role, "MEMBER_STATUS_UPDATED", body.username + " -> " + body.status);
   return { success: true };
 }
 
@@ -815,18 +859,35 @@ function getAnalytics_(body) {
 
 // =============================================================================
 // FEATURE 8 — REVIEWS
+// The ReviewToken lives on the History row itself (set when the service was
+// recorded), so we validate against History rather than pre-creating a row
+// in Reviews. The Reviews tab now only ever gets a new row at the moment a
+// customer actually submits feedback — nothing is written there before that.
 // =============================================================================
-function getReviewContext_(body) {
-  const token = body.reviewToken;
-  const sh = sheet_("Reviews");
-  const data = sh.getDataRange().getValues();
+function findHistoryRowByReviewToken_(token) {
+  const data = sheet_("History").getDataRange().getValues();
+  const cols = historyColumns_();
+  const tokenIdx = cols.indexOf("ReviewToken");
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === token) {
-      if (data[i][5] === "Submitted") return { success: false, message: "You've already submitted feedback for this visit. Thank you!" };
-      return { success: true, workshop: data[i][2] };
+    if (data[i][tokenIdx] === token) {
+      return { username: data[i][2], name: data[i][3], workshop: data[i][7] };
     }
   }
-  return { success: false, message: "This review link is invalid or has expired." };
+  return null;
+}
+
+function reviewAlreadySubmitted_(token) {
+  const data = sheet_("Reviews").getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) if (data[i][0] === token) return true;
+  return false;
+}
+
+function getReviewContext_(body) {
+  const token = body.reviewToken;
+  const match = findHistoryRowByReviewToken_(token);
+  if (!match) return { success: false, message: "This review link is invalid or has expired." };
+  if (reviewAlreadySubmitted_(token)) return { success: false, message: "You've already submitted feedback for this visit. Thank you!" };
+  return { success: true, workshop: match.workshop };
 }
 
 function submitReview_(body) {
@@ -834,17 +895,35 @@ function submitReview_(body) {
   const rating = Number(body.rating);
   if (!rating || rating < 1 || rating > 5) return { success: false, message: "Please select a rating." };
 
-  const sh = sheet_("Reviews");
-  const data = sh.getDataRange().getValues();
+  const match = findHistoryRowByReviewToken_(token);
+  if (!match) return { success: false, message: "This review link is invalid or has expired." };
+  if (reviewAlreadySubmitted_(token)) return { success: false, message: "You've already submitted feedback for this visit." };
+
+  const now = new Date();
+  sheet_("Reviews").appendRow([token, match.username, match.workshop, rating, body.comment || "", "Submitted", now, now]);
+  logAudit_(match.username, "member", "REVIEW_SUBMITTED", "Rating " + rating + " @ " + match.workshop);
+  return { success: true };
+}
+
+/** Feature 8 (display) — list submitted reviews for the staff dashboard. */
+function getReviews_(body) {
+  const auth = requireAuth_(body.token, ["admin", "manager", "webmaster"]);
+  if (!auth.ok) return { success: false, message: auth.error };
+  const user = auth.user;
+
+  const data = sheet_("Reviews").getDataRange().getValues();
+  const reviews = [];
+  let ratingSum = 0;
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === token) {
-      if (data[i][5] === "Submitted") return { success: false, message: "You've already submitted feedback for this visit." };
-      sh.getRange(i + 1, 4, 1, 5).setValues([[rating, body.comment || "", "Submitted", data[i][6], new Date()]]);
-      logAudit_(data[i][1], "member", "REVIEW_SUBMITTED", "Rating " + rating);
-      return { success: true };
-    }
+    const r = { token: data[i][0], username: data[i][1], workshop: data[i][2], rating: data[i][3], comment: data[i][4], submittedAt: formatDate_(data[i][7]) };
+    if (user.role === "admin" && r.workshop !== user.workshop) continue;
+    if ((user.role === "manager" || user.role === "webmaster") && body.workshop && body.workshop !== "All" && r.workshop !== body.workshop) continue;
+    reviews.push(r);
+    ratingSum += Number(r.rating) || 0;
   }
-  return { success: false, message: "This review link is invalid or has expired." };
+  reviews.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
+  const avgRating = reviews.length ? (ratingSum / reviews.length) : 0;
+  return { success: true, reviews, avgRating, count: reviews.length };
 }
 
 // =============================================================================
