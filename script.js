@@ -15,7 +15,7 @@ const CONFIG = {
   GOOGLE_REVIEW_LINKS: {
     "Melaka": "https://search.google.com/local/writereview?placeid=ChIJx12eMwDl0TERGeSikxRbNjU",
     "Negeri Sembilan": "https://search.google.com/local/writereview?placeid=ChIJnT6mkSTnzTERheFsqeYbjNA",
-    "Johor": "https://search.google.com/local/writereview?placeid= ChIJazvBzr5x2jERYqMdQsUujLU"
+    "Johor": "https://search.google.com/local/writereview?placeid=ChIJazvBzr5x2jERYqMdQsUujLU"
   }
 };
 
