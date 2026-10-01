@@ -1,0 +1,98 @@
+# Workshop2U Website — Setup Guide
+
+A static website (for GitHub Pages) backed by a Google Sheet + Google Apps
+Script "API". No paid hosting or database required. This version includes
+all 14 of the previously-suggested features, wired directly into the code.
+
+**Files**
+- `index.html` — the full site (public pages + Members login/dashboard + review modal)
+- `style.css` — styling
+- `script.js` — front-end logic, calls the Apps Script backend
+- `Code.gs` — Google Apps Script backend (paste into the Apps Script editor)
+
+---
+
+## 1. Create the Google Sheet
+
+1. Go to [sheets.google.com](https://sheets.google.com) and create a new spreadsheet, e.g. **"Workshop2U Database"**.
+2. Open **Extensions → Apps Script**, delete the placeholder code, and paste in the entire contents of `Code.gs`.
+3. Select the function `initializeSheet` from the dropdown and click **Run**.
+   - Creates all 11 tabs: `Credentials`, `History`, `Bookings`, `Sessions`, `Vehicles`, `LoginAttempts`, `OtpCodes`, `PasswordResets`, `Reviews`, `AuditLog`, `Reminders`.
+   - Creates one starter login: **username `webmaster`, password `ChangeMe123!`**. Change this immediately, and give it a real email address (Column H in `Credentials`) so its login codes (2FA) can be delivered.
+4. Grant permissions when prompted.
+
+## Updating an existing deployment
+
+If your Sheet already has data in it (i.e. you're updating rather than setting up fresh), re-run **`initializeSheet`** once from the Apps Script editor after pasting in the new `Code.gs`. It's safe to run again — it only creates tabs that don't already exist and only writes headers into empty ones — and it's what creates the new `InvoiceQueue` tab that `processInvoiceQueue` (below) needs. Nothing you already have gets touched.
+
+## 2. Set up the daily automation (Feature 1 reminders + cleanup)
+
+In the Apps Script editor: **Triggers → Add Trigger**
+- Function `sendServiceReminders`, Event source: Time-driven, Day timer, once a day (e.g. 8–9am). Emails customers whose vehicle is due for service soon.
+- Function `cleanExpiredSessions`, Time-driven, once a day. Clears out expired login sessions, OTP codes and reset codes.
+- Function `processInvoiceQueue`, Event source: Time-driven, **Minutes timer, every minute**. Saving a service record no longer builds the PDF and sends the invoice email itself — doing that inline could take long enough to make the browser think the save had failed and retry it, which is what caused records to occasionally get saved twice. Instead it just queues the invoice (`InvoiceQueue` tab) and returns immediately; this trigger is what actually sends it, shortly after. Every-minute is the shortest interval Apps Script allows and is what keeps that delay down to under a minute or so rather than several — earlier testing with a longer interval (e.g. every 5 minutes) is what produced the "sometimes 2 minutes, sometimes almost 5" delay in the invoice email arriving.
+
+## 3. Deploy the Apps Script as a Web App
+
+1. **Deploy → New deployment → Web app**.
+2. Execute as: **Me**. Who has access: **Anyone**.
+3. Click **Deploy**, authorize, copy the Web app URL (ends in `/exec`).
+4. Paste it into `CONFIG.API_URL` near the top of `script.js`.
+5. Every time you edit `Code.gs`, create a **new deployment version** (Deploy → Manage deployments → Edit → New version) so changes go live.
+
+## 4. Publish the site on GitHub Pages
+
+1. Create a GitHub repo, upload `index.html`, `style.css`, `script.js` to the root.
+2. **Settings → Pages** → source branch `main`, folder `/root` → Save.
+3. Live at `https://<your-username>.github.io/<repo-name>/`.
+
+## 5. First-time staff setup
+
+Log in as `webmaster` → **Manage Staff Accounts** tab → create:
+- 1 **manager** (Workshop: `All`)
+- 3 **admins**, one per location (Workshop: `Melaka` / `Negeri Sembilan` / `Johor`)
+
+Give every staff account a real email — it's required for the OTP second factor on login. Admins/manager then create **member** accounts and log service history from their dashboards.
+
+---
+
+## How each of the 14 features works
+
+| # | Feature | Where it lives |
+|---|---|---|
+| 1 | **Service reminders** | `sendServiceReminders()` in `Code.gs`, run on a daily trigger. Computes each vehicle's next-due date (last service + 180 days) and emails the customer once, with a 30-day cooldown tracked in the `Reminders` tab. The member dashboard also shows "Next service due" (`getHistory_` returns `nextServiceDue`). |
+| 2 | **Booking approval workflow** | New **Bookings** tab in the staff dashboard. Admin/manager/webmaster can Confirm / Reject / Reschedule each request (`getBookings` / `updateBookingStatus` actions); the customer gets an email either way. |
+| 3 | **Digital invoices/receipts** | `generateReceiptPdf_()` builds a PDF via Google Docs → Drive export and emails it automatically whenever `addHistory_` runs, if the customer has an email on file. |
+| 4 | **Two-factor / OTP login** | Staff logins (admin/manager/webmaster) trigger a 6-digit emailed code (`OtpCodes` tab) that must be entered on the new OTP screen before a session is created. Members log in directly, no OTP. |
+| 5 | **Rate limiting & lockout** | `LoginAttempts` tab. 5 failed attempts locks the account for 15 minutes; resets on success. |
+| 6 | **Self-service password reset** | "Forgot your password?" on the login screen emails a 6-digit reset code (`PasswordResets` tab, 30-minute expiry) instead of requiring an admin. |
+| 7 | **Dashboard (analytics)** | The **Dashboard** tab (renamed from "Analytics", and now the tab staff land on after logging in) — four Chart.js charts, each scoped the same way as history (admin = own workshop, manager/webmaster = all, further narrowed by whichever dropdown a chart has): a monthly revenue-by-workshop bar chart (last 12 months); a Service Type pie chart (count + %) with its own workshop dropdown; a Members pie chart with a workshop dropdown — "All Locations" shows the member split *by workshop*, narrowing to one specific workshop switches it to an Active-vs-Inactive split for that workshop instead (a single-workshop "by workshop" pie would just be one pointless full slice); and a daily revenue bar chart for a selected month, with a month dropdown running from September 2026 up to the current month. |
+| 8 | **Review/rating capture** | Every saved service record gets a `ReviewToken`; the invoice email includes a feedback link (`?review=TOKEN`). Visiting that link opens a star-rating modal on the site, stored in the `Reviews` tab only once actually submitted — the popup itself now opens instantly from the link's token — no network wait — with the workshop name and an invalid/already-submitted check filling in a moment later in the background rather than gating whether the popup appears at all. Submitting shows "thank you" immediately too (optimistic UI), reverting cleanly back to the form if the background save ever fails. After submitting, if `CONFIG.GOOGLE_REVIEW_LINKS` has a link set for that workshop, the customer also sees a "Copy My Review" + "Submit Google Review" button so they can paste the same feedback onto your Google Business Profile without retyping it. |
+
+## Staff dashboard layout
+
+Tabs, left to right: **Dashboard** (renamed from Analytics — also the tab staff land on after logging in), **Members**, **Service History**, **Bookings**, **Reviews**, then (webmaster only) **Manage Staff Accounts** and **Audit Log**, then **Change Password** last.
+
+"Add Service Record" and "Add Member" are no longer separate tabs — each is now a **"+ Add..."** button inside the relevant page's toolbar (Service History and Members respectively), which reveals the form inline, right where the button is. Clicking **Edit** on a Service History row opens the same inline form pre-filled, in-place. Submitting a fresh "Add" leaves the form open and resets it, so staff can enter several records/members back-to-back without reopening it each time; submitting an "Edit" or clicking **Cancel** closes it again.
+
+## Editing a service record
+
+Staff (admin/manager/webmaster) can now click **Edit** next to any row in the Service History table — it reuses the "Add Service Record" form, pre-filled, and switches to "Update Service Record" mode. Editing does **not** re-send the invoice email, generate a new review link, or touch the Reviews tab — it only corrects the stored fields. This relies on a `HistoryID` column at the end of the `History` tab. Rows saved before that column existed are given an ID automatically the first time a staff member opens Service History after upgrading (one-off, nothing to run), so every row gets an Edit button.
+| 9 | **Multi-vehicle members** | `Vehicles` tab, auto-populated the first time a plate is used for a member. The member dashboard has a "My Vehicles" tab and a vehicle filter on their history. |
+| 10 | **WhatsApp button + Maps** | Floating WhatsApp button (bottom-right, set your number in `CONFIG.WHATSAPP_NUMBER`). Each location card has an embedded Google Map (no API key needed). |
+| 11 | **Audit log** | `AuditLog` tab records logins, failed logins, OTPs, password resets, account changes, history additions, booking updates and reviews. Visible to the webmaster under **Audit Log**. |
+| 12 | **Export to Excel/PDF** | "Export CSV" buttons (opens directly in Excel) and "Print / Save PDF" buttons (uses the browser's print dialog with a clean print stylesheet) on both the member and staff history tables. |
+| 13 | **CAPTCHA on booking form** | A simple arithmetic challenge (client-side) plus a hidden honeypot field (`website`) checked server-side in `bookAppointment_` — bots that auto-fill every field get silently ignored. |
+| 14 | **SEO & performance** | Open Graph / Twitter meta tags, canonical URL, `robots` meta, `theme-color`, `loading="lazy"` on images. See the note below about replacing hot-linked images. |
+
+---
+
+## Notes & limitations
+
+- This suits a small business well; Google Sheets comfortably handles years of history. If traffic grows a lot, consider migrating the backend to a proper database.
+- Keep the Apps Script deployment's "Execute as: Me" account secure — it owns the sheet and sends all emails.
+- Replace `WORKSHOP_NOTIFY_EMAILS` in `Code.gs` with your real workshop emails, and `CONFIG.WHATSAPP_NUMBER` in `script.js` with your real WhatsApp number.
+- Set `CONFIG.GOOGLE_REVIEW_LINKS` in `script.js` with each workshop's Google review link once you have them (from business.google.com's "Get more reviews" feature, or Google's Place ID Finder tool). Leave a workshop blank to simply skip the Google Review button for it — nothing breaks either way.
+- Replace the hot-linked images from `workshop2u.com.my` in `index.html` with your own hosted photos before launch, for performance and licensing reasons.
+- The booking-form CAPTCHA is a lightweight, dependency-free deterrent. For stronger bot protection, swap in Google reCAPTCHA v3: add the site key script to `index.html`, get a token client-side, send it to `bookAppointment_`, and verify it server-side with `UrlFetchApp.fetch("https://www.google.com/recaptcha/api/siteverify", ...)` before saving.
+- PDF invoice generation uses your Apps Script account's Google Drive briefly (the doc is created, exported to PDF, then trashed) — this is normal and doesn't use noticeable storage.
